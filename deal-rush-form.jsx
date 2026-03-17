@@ -2,33 +2,13 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 const PROPERTY_TYPES = ["Apartment", "Villa"];
 const SIZES = ["T1", "T2", "T3", "T4+"];
-const PRICE_RANGES = ["200-400k", "400-600k", "600k-1M", "1M+"];
-const LOCATIONS = ["Lisbon", "Porto", "Algarve", "Cascais", "Sintra", "Madeira"];
-
-const BUYER_NAMES = [
-  "Sofia M.", "Pedro L.", "Ana C.", "Marco R.", "Inês B.", "João T.",
-  "Maria F.", "Tiago S.", "Beatriz N.", "Ricardo P.", "Catarina D.", "André V.",
-  "Leonor G.", "Miguel A.", "Carolina H.", "Diogo E.", "Marta O.", "Rui K.",
-];
-const BUYER_QUOTES = [
-  "Looking for a family home in the city...",
-  "I need a quiet place near the beach...",
-  "Searching for an investment property...",
-  "Want a modern space with a view...",
-  "Need something close to schools...",
-  "Looking for a vacation home...",
-  "Relocating for work, need something fast...",
-  "First-time buyer, flexible on location...",
-  "Downsizing, want low maintenance...",
-  "Looking for rental investment potential...",
+const PRICES = ["€350k", "€550k", "€850k"];
+const LOCATIONS = [
+  { name: "Lisbon", img: "https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=200&h=120&fit=crop" },
+  { name: "Porto", img: "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=200&h=120&fit=crop" },
+  { name: "Algarve", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&h=120&fit=crop" },
 ];
 
-function randomBuyer() {
-  return {
-    name: BUYER_NAMES[Math.floor(Math.random() * BUYER_NAMES.length)],
-    quote: BUYER_QUOTES[Math.floor(Math.random() * BUYER_QUOTES.length)],
-  };
-}
 
 function MatchOverlay({ show }) {
   if (!show) return null;
@@ -148,7 +128,7 @@ function Fireworks({ matches, onReplay }) {
   );
 }
 
-function SelectionPanel({ side, selections, onSelect, onSubmit, matchCount, timeLeft, disabled, buyer }) {
+function SelectionPanel({ side, selections, onSelect, onSubmit, matchCount, timeLeft, disabled }) {
   const isListing = side === "listing";
   const accent = isListing ? "#60A5FA" : "#F472B6";
   const accentBg = isListing ? "rgba(96,165,250,0.15)" : "rgba(244,114,182,0.15)";
@@ -209,13 +189,6 @@ function SelectionPanel({ side, selections, onSelect, onSubmit, matchCount, time
     </svg>
   );
 
-  const buyerIcon = (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="8" r="4" stroke={accent} strokeWidth="1.5"/>
-      <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" stroke={accent} strokeWidth="1.5"/>
-    </svg>
-  );
-
   return (
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
@@ -267,35 +240,6 @@ function SelectionPanel({ side, selections, onSelect, onSubmit, matchCount, time
         <div style={{ flex: 1, height: 3, borderRadius: 2, background: selections.location ? "#10B981" : "#334155", transition: "background 0.3s" }}/>
       </div>
 
-      {/* Buyer profile card (buyer side only) */}
-      {!isListing && buyer && (
-        <div style={{
-          background: "#1E293B", borderRadius: 12, padding: 14, marginBottom: 14,
-          border: "1px solid #334155",
-        }}>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 10 }}>
-            <div style={{
-              width: 48, height: 48, borderRadius: "50%",
-              background: "rgba(244,114,182,0.15)", border: "1px solid rgba(244,114,182,0.3)",
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}>
-              {buyerIcon}
-            </div>
-            <div>
-              <div style={{ fontSize: 10, color: "#64748B", letterSpacing: 1, textTransform: "uppercase" }}>AI buyer profile</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#F1F5F9" }}>{buyer.name}</div>
-              <div style={{ fontSize: 11, color: "#94A3B8" }}>Generated persona</div>
-            </div>
-          </div>
-          <div style={{
-            background: "#0F172A", borderRadius: 8, padding: "8px 12px",
-            fontSize: 12, color: "#94A3B8", fontStyle: "italic",
-          }}>
-            "{buyer.quote}"
-          </div>
-        </div>
-      )}
-
       {/* Property type / What are they looking for */}
       <div style={{ fontSize: 11, color: "#64748B", letterSpacing: 1, fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>
         {isListing ? "1. Property type" : "What are they looking for?"}
@@ -322,10 +266,10 @@ function SelectionPanel({ side, selections, onSelect, onSubmit, matchCount, time
       <div style={{ fontSize: 11, color: "#64748B", letterSpacing: 1, fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>
         {isListing ? "3. Price range" : "Budget"}
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-        {PRICE_RANGES.map(p => (
+      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        {PRICES.map(p => (
           <Chip key={p} label={p} selected={selections.priceRange === p}
-            onClick={() => onSelect("priceRange", p)} wide />
+            onClick={() => onSelect("priceRange", p)} />
         ))}
       </div>
 
@@ -333,19 +277,24 @@ function SelectionPanel({ side, selections, onSelect, onSubmit, matchCount, time
       <div style={{ fontSize: 11, color: "#64748B", letterSpacing: 1, fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>
         {isListing ? "4. Location" : "Preferred area"}
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
         {LOCATIONS.map(l => (
-          <div key={l} onClick={disabled ? undefined : () => onSelect("location", l)} style={{
-            flex: "1 1 30%", background: selections.location === l ? accentBg : "#1E293B",
-            border: `1.5px solid ${selections.location === l ? accentBorder : "#334155"}`,
-            borderRadius: 10, padding: "10px 6px", textAlign: "center",
+          <div key={l.name} onClick={disabled ? undefined : () => onSelect("location", l.name)} style={{
+            flex: 1, background: selections.location === l.name ? accentBg : "#1E293B",
+            border: `1.5px solid ${selections.location === l.name ? accentBorder : "#334155"}`,
+            borderRadius: 10, overflow: "hidden",
             cursor: disabled ? "default" : "pointer", transition: "all 0.15s",
             userSelect: "none", WebkitTapHighlightColor: "transparent",
           }}>
-            <span style={{
-              fontSize: 12, fontWeight: selections.location === l ? 700 : 500,
-              color: selections.location === l ? accent : "#94A3B8",
-            }}>{l}</span>
+            <img src={l.img} alt={l.name} style={{
+              width: "100%", height: 56, objectFit: "cover", display: "block",
+            }}/>
+            <div style={{ padding: "6px 4px", textAlign: "center" }}>
+              <span style={{
+                fontSize: 12, fontWeight: selections.location === l.name ? 700 : 500,
+                color: selections.location === l.name ? accent : "#94A3B8",
+              }}>{l.name}</span>
+            </div>
           </div>
         ))}
       </div>
@@ -378,7 +327,6 @@ export default function DealRushForm() {
   const [matchCount, setMatchCount] = useState(0);
   const [showMatch, setShowMatch] = useState(false);
   const [showNoMatch, setShowNoMatch] = useState(false);
-  const [buyer, setBuyer] = useState(() => randomBuyer());
   const [listingSel, setListingSel] = useState({ propertyType: null, size: null, priceRange: null, location: null });
   const [buyerSel, setBuyerSel] = useState({ propertyType: null, size: null, priceRange: null, location: null });
   const [listingSubmitted, setListingSubmitted] = useState(false);
@@ -390,7 +338,6 @@ export default function DealRushForm() {
     setBuyerSel({ propertyType: null, size: null, priceRange: null, location: null });
     setListingSubmitted(false);
     setBuyerSubmitted(false);
-    setBuyer(randomBuyer());
   }, []);
 
   const startGame = useCallback(() => {
@@ -550,7 +497,6 @@ export default function DealRushForm() {
             matchCount={matchCount}
             timeLeft={timeLeft}
             disabled={state === "finished" || buyerSubmitted}
-            buyer={buyer}
           />
         </div>
       )}
