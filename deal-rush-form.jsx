@@ -422,7 +422,7 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
 }
 
 // ─── Lobby Screen ───
-function LobbyScreen({ onJoin, onSettings }) {
+function LobbyScreen({ onJoin, onSettings, onLeaderboard }) {
   const [name, setName] = useState("");
   const [office, setOffice] = useState("");
 
@@ -440,17 +440,32 @@ function LobbyScreen({ onJoin, onSettings }) {
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
       minHeight: "100vh", padding: 32, background: "#0F172A", position: "relative",
     }}>
-      {/* Settings gear */}
-      <div onClick={onSettings} style={{
-        position: "absolute", top: 16, right: 16, width: 40, height: 40,
-        borderRadius: 10, background: "#1E293B", border: "1px solid #334155",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", transition: "border-color 0.2s",
-      }}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="#64748B" strokeWidth="1.5" />
-          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="#64748B" strokeWidth="1.5" />
-        </svg>
+      {/* Top right icons */}
+      <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8 }}>
+        {/* Leaderboard */}
+        <div onClick={onLeaderboard} style={{
+          width: 40, height: 40, borderRadius: 10, background: "#1E293B", border: "1px solid #334155",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer",
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="14" width="4" height="7" rx="1" stroke="#FBBF24" strokeWidth="1.5" />
+            <rect x="10" y="8" width="4" height="13" rx="1" stroke="#FBBF24" strokeWidth="1.5" />
+            <rect x="17" y="11" width="4" height="10" rx="1" stroke="#FBBF24" strokeWidth="1.5" />
+            <path d="M12 3l1.5 2.5H14L12 4l-2 1.5h.5L12 3z" fill="#FBBF24" />
+          </svg>
+        </div>
+        {/* Settings gear */}
+        <div onClick={onSettings} style={{
+          width: 40, height: 40, borderRadius: 10, background: "#1E293B", border: "1px solid #334155",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          cursor: "pointer",
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke="#64748B" strokeWidth="1.5" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="#64748B" strokeWidth="1.5" />
+          </svg>
+        </div>
       </div>
 
       <div style={{
@@ -678,9 +693,192 @@ function SettingsPage({ onBack }) {
   );
 }
 
+// ─── Leaderboard Full Page ───
+function LeaderboardPage({ onBack }) {
+  const [games, setGames] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  async function fetchLeaderboard() {
+    const { data } = await supabase.from("games").select("*").order("total_commission", { ascending: false }).limit(20);
+    if (data) {
+      // Aggregate by team
+      const teamMap = {};
+      data.forEach(g => {
+        const key = `${g.player1_name} & ${g.player2_name}`;
+        if (!teamMap[key]) {
+          teamMap[key] = { team: key, office: g.player1_office, matches: 0, commission: 0, gamesPlayed: 0, bestMatch: 0 };
+        }
+        teamMap[key].matches += g.matches;
+        teamMap[key].commission += Number(g.total_commission);
+        teamMap[key].gamesPlayed += 1;
+        teamMap[key].bestMatch = Math.max(teamMap[key].bestMatch, g.matches);
+      });
+      const sorted = Object.values(teamMap).sort((a, b) => b.commission - a.commission || b.matches - a.matches);
+      setGames(sorted);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    fetchLeaderboard();
+
+    // Realtime: listen for new inserts on games table
+    const channel = supabase.channel("leaderboard-realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "games" }, () => {
+        fetchLeaderboard();
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "games" }, () => {
+        fetchLeaderboard();
+      })
+      .subscribe();
+
+    // Also poll every 10s as fallback
+    const poll = setInterval(fetchLeaderboard, 10000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(poll);
+    };
+  }, []);
+
+  const medalColors = { 1: "#FBBF24", 2: "#94A3B8", 3: "#CD7F32" };
+  const medalEmojis = { 1: "🥇", 2: "🥈", 3: "🥉" };
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#0F172A", color: "#F1F5F9",
+      fontFamily: "system-ui,-apple-system,sans-serif",
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        borderBottom: "1px solid #1E293B",
+      }}>
+        <div onClick={onBack} style={{
+          display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#94A3B8",
+          fontSize: 14, fontWeight: 600,
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M15 18L9 12L15 6" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Back
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="14" width="4" height="7" rx="1" stroke="#FBBF24" strokeWidth="1.5" />
+            <rect x="10" y="8" width="4" height="13" rx="1" stroke="#FBBF24" strokeWidth="1.5" />
+            <rect x="17" y="11" width="4" height="10" rx="1" stroke="#FBBF24" strokeWidth="1.5" />
+          </svg>
+          <span style={{ fontSize: 20, fontWeight: 800 }}>Leaderboard</span>
+        </div>
+        <div style={{
+          fontSize: 10, color: "#10B981", background: "rgba(16,185,129,0.1)",
+          border: "1px solid rgba(16,185,129,0.3)", borderRadius: 20,
+          padding: "4px 10px", fontWeight: 600, letterSpacing: 1,
+          animation: "pulse4 2s infinite",
+        }}>LIVE</div>
+      </div>
+
+      {/* Top 3 podium */}
+      {games.length >= 3 && (
+        <div style={{
+          display: "flex", justifyContent: "center", alignItems: "flex-end",
+          gap: 12, padding: "32px 24px 20px",
+        }}>
+          {[1, 0, 2].map(idx => {
+            const g = games[idx];
+            if (!g) return null;
+            const rank = idx + 1;
+            const actualRank = idx === 1 ? 1 : idx === 0 ? 2 : 3;
+            const isFirst = actualRank === 1;
+            const height = isFirst ? 120 : actualRank === 2 ? 96 : 80;
+            const medal = medalColors[actualRank];
+            return (
+              <div key={g.team} style={{
+                display: "flex", flexDirection: "column", alignItems: "center", width: isFirst ? 140 : 110,
+                animation: `lbRowFade 0.5s ${actualRank * 0.15}s ease-out both`,
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 4 }}>{medalEmojis[actualRank]}</div>
+                <div style={{
+                  fontSize: isFirst ? 14 : 12, fontWeight: 800, color: "#F1F5F9",
+                  textAlign: "center", marginBottom: 2, lineHeight: 1.2,
+                }}>{g.team}</div>
+                <div style={{ fontSize: 10, color: "#64748B", marginBottom: 8 }}>{g.office}</div>
+                <div style={{
+                  width: "100%", height, borderRadius: "12px 12px 0 0",
+                  background: `linear-gradient(180deg, ${medal}33, ${medal}11)`,
+                  border: `1px solid ${medal}44`,
+                  borderBottom: "none",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 4,
+                }}>
+                  <div style={{ fontSize: isFirst ? 22 : 18, fontWeight: 900, color: "#FBBF24" }}>
+                    €{g.commission.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#94A3B8" }}>{g.matches} matches</div>
+                  <div style={{ fontSize: 9, color: "#475569" }}>{g.gamesPlayed} games</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Rest of the list */}
+      <div style={{ padding: "0 24px 40px", maxWidth: 600, margin: "0 auto" }}>
+        {loading ? (
+          <div style={{ textAlign: "center", color: "#475569", padding: 60 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: "50%", border: "3px solid #334155",
+              borderTopColor: "#10B981", animation: "spin 1s linear infinite",
+              margin: "0 auto 12px",
+            }} />
+            Loading...
+          </div>
+        ) : games.length === 0 ? (
+          <div style={{ textAlign: "center", color: "#475569", padding: 60 }}>
+            No games played yet. Be the first!
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: games.length >= 3 ? 0 : 20 }}>
+            {games.map((g, i) => {
+              const rank = i + 1;
+              if (rank <= 3 && games.length >= 3) return null; // Already shown in podium
+              const medal = medalColors[rank];
+              return (
+                <div key={`${g.team}-${i}`} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: "rgba(30,41,59,0.6)", border: "1px solid #334155",
+                  borderRadius: 12, padding: "12px 16px",
+                  animation: `lbRowFade 0.4s ${0.1 + i * 0.05}s ease-out both`,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 10,
+                      background: "#1E293B", border: "1.5px solid #334155",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 14, fontWeight: 900, color: "#64748B",
+                    }}>{rank}</div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#F1F5F9" }}>{g.team}</div>
+                      <div style={{ fontSize: 10, color: "#475569" }}>{g.office} · {g.gamesPlayed} games · {g.matches} matches</div>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "#FBBF24" }}>€{g.commission.toLocaleString()}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main App ───
 export default function DealRushForm() {
-  const [gameState, setGameState] = useState("lobby"); // lobby, waiting, countdown, playing, finished
+  const initialState = window.location.hash === "#leaderboard" ? "leaderboard" : window.location.hash === "#settings" ? "settings" : "lobby";
+  const [gameState, setGameState] = useState(initialState); // lobby, waiting, countdown, playing, finished, settings, leaderboard
   const [role, setRole] = useState(null); // "listing" or "buyer"
   const [player, setPlayer] = useState(null); // { name, office }
   const [partner, setPartner] = useState(null);
@@ -974,6 +1172,24 @@ export default function DealRushForm() {
     idRef.current = 0;
   }, []);
 
+  // Sync hash with state
+  useEffect(() => {
+    if (gameState === "leaderboard") window.location.hash = "leaderboard";
+    else if (gameState === "settings") window.location.hash = "settings";
+    else if (window.location.hash) window.location.hash = "";
+  }, [gameState]);
+
+  // Listen for hash changes (browser back/forward)
+  useEffect(() => {
+    const onHash = () => {
+      if (window.location.hash === "#leaderboard") setGameState("leaderboard");
+      else if (window.location.hash === "#settings") setGameState("settings");
+      else if (gameState === "leaderboard" || gameState === "settings") setGameState("lobby");
+    };
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [gameState]);
+
   const handleSelect = useCallback((field, value) => {
     if (gameState !== "playing") return;
     setSelections(p => ({ ...p, [field]: p[field] === value ? null : value }));
@@ -1008,8 +1224,9 @@ export default function DealRushForm() {
         input::placeholder{color:#475569}
       `}</style>
 
-      {gameState === "lobby" && <LobbyScreen onJoin={handleJoin} onSettings={() => setGameState("settings")} />}
+      {gameState === "lobby" && <LobbyScreen onJoin={handleJoin} onSettings={() => setGameState("settings")} onLeaderboard={() => setGameState("leaderboard")} />}
       {gameState === "settings" && <SettingsPage onBack={() => setGameState("lobby")} />}
+      {gameState === "leaderboard" && <LeaderboardPage onBack={() => setGameState("lobby")} />}
 
       {gameState === "waiting" && <WaitingScreen player={player} role={role} />}
 
