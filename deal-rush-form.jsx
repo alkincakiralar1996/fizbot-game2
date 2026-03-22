@@ -38,7 +38,7 @@ const LOCATIONS = [
 ];
 const PRICE_MATCH_MAP = { "€300k": "€200-400k", "€500k": "€400-600k", "€800k": "€600-800k" };
 const PRICE_TO_VALUE = { "€300k": 300000, "€500k": 500000, "€800k": 800000 };
-const GAME_DURATION = 300;
+const DEFAULT_gameDuration = 300;
 const CHANNEL_NAME = "match-it-game";
 
 // ─── Sound Utility ───
@@ -817,10 +817,10 @@ function WaitingScreen({ player, role, onExit }) {
 }
 
 // ─── Settings Page ───
-function SettingsPage({ onBack }) {
+function SettingsPage({ onBack, gameDuration, onDurationChange }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [clearing, setClearing] = useState(false);
+  const [durationInput, setDurationInput] = useState(String(gameDuration));
 
   useEffect(() => { fetchGames(); }, []);
 
@@ -831,12 +831,14 @@ function SettingsPage({ onBack }) {
     setLoading(false);
   }
 
-  async function clearAll() {
-    if (!confirm("Are you sure? This will delete ALL game data.")) return;
-    setClearing(true);
-    await supabase.from("games").delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    setGames([]);
-    setClearing(false);
+  async function deleteGame(id) {
+    setGames(prev => prev.filter(g => g.id !== id));
+    await supabase.from("games").delete().eq("id", id);
+  }
+
+  function handleDurationSave() {
+    const val = parseInt(durationInput);
+    if (val >= 10 && val <= 600) onDurationChange(val);
   }
 
   const totalMatches = games.reduce((s, g) => s + g.matches, 0);
@@ -874,12 +876,28 @@ function SettingsPage({ onBack }) {
           ))}
         </div>
 
-        {/* Clear button */}
-        <button onClick={clearAll} disabled={clearing || games.length === 0} style={{
-          width: "100%", padding: "14px", fontSize: 14, fontWeight: 700, color: games.length === 0 ? FB.textDim : FB.error,
-          background: games.length === 0 ? "#FFFFFF" : "#FEE2E2", border: `1.5px solid ${games.length === 0 ? FB.border : FB.error + "33"}`,
-          borderRadius: 14, cursor: games.length === 0 ? "default" : "pointer", textTransform: "uppercase", letterSpacing: 2, marginBottom: 28, fontFamily: "system-ui",
-        }}>{clearing ? "Clearing..." : "Clear all data"}</button>
+        {/* Game Duration */}
+        <div style={{ background: "#FFFFFF", border: `2px solid ${FB.border}`, borderRadius: 16, padding: "18px 20px", marginBottom: 28, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: FB.textSec, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Game Duration</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <input value={durationInput} onChange={e => setDurationInput(e.target.value.replace(/\D/g, ""))}
+              style={{
+                flex: 1, padding: "12px 16px", fontSize: 18, fontWeight: 700, background: FB.bgSec,
+                border: `1.5px solid ${FB.border}`, borderRadius: 12, color: FB.text, outline: "none",
+                fontFamily: "system-ui", textAlign: "center",
+              }}
+              onFocus={e => e.target.style.borderColor = FB.primary}
+              onBlur={e => e.target.style.borderColor = FB.border}
+            />
+            <span style={{ fontSize: 16, color: FB.textSec, fontWeight: 600 }}>seconds</span>
+            <button onClick={handleDurationSave} style={{
+              padding: "12px 24px", fontSize: 14, fontWeight: 700, color: "#FFFFFF",
+              background: FB.primary, border: "none", borderRadius: 12, cursor: "pointer",
+              fontFamily: "system-ui",
+            }}>Save</button>
+          </div>
+          <div style={{ fontSize: 12, color: FB.textTer, marginTop: 8 }}>Min: 10s · Max: 600s · Current: {gameDuration}s ({Math.floor(gameDuration/60)}m {gameDuration%60}s)</div>
+        </div>
 
         {/* Game history */}
         <div style={{ fontSize: 14, color: FB.textSec, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, marginBottom: 14 }}>Game history ({games.length})</div>
@@ -894,7 +912,20 @@ function SettingsPage({ onBack }) {
               <div key={g.id} style={{ background: "#FFFFFF", border: `1.5px solid ${FB.border}`, borderRadius: 16, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <div style={{ fontSize: 17, fontWeight: 800, color: FB.text }}>{g.player1_name} & {g.player2_name}</div>
-                  <div style={{ fontSize: 12, color: FB.textTer }}>{new Date(g.played_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ fontSize: 12, color: FB.textTer }}>{new Date(g.played_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                    <div onClick={() => deleteGame(g.id)} style={{
+                      width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer", color: FB.textTer, transition: "all 0.15s",
+                    }}
+                      onMouseOver={e => { e.currentTarget.style.background = "#FEE2E2"; e.currentTarget.style.color = FB.error; }}
+                      onMouseOut={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = FB.textTer; }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                    </div>
+                  </div>
                 </div>
                 <div style={{ display: "flex", gap: 20, fontSize: 14 }}>
                   <div><span style={{ color: FB.textTer }}>Office: </span><span style={{ color: FB.textSec, fontWeight: 600 }}>{g.player1_office}</span></div>
@@ -1051,7 +1082,8 @@ export default function DealRushForm() {
   const [role, setRole] = useState(null);
   const [player, setPlayer] = useState(null);
   const [partner, setPartner] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
+  const [gameDuration, setGameDuration] = useState(DEFAULT_GAME_DURATION);
+  const [timeLeft, setTimeLeft] = useState(DEFAULT_GAME_DURATION);
   const [countdown, setCountdown] = useState(3);
   const [matchCount, setMatchCount] = useState(0);
   const [totalCommission, setTotalCommission] = useState(0);
@@ -1073,6 +1105,13 @@ export default function DealRushForm() {
   const buyersRef = useRef([]);
   useEffect(() => { listingsRef.current = listings; }, [listings]);
   useEffect(() => { buyersRef.current = buyers; }, [buyers]);
+
+  // Load game duration from DB on mount
+  useEffect(() => {
+    supabase.from("settings").select("value").eq("key", "game_duration").single().then(({ data }) => {
+      if (data) { const v = parseInt(data.value); setGameDuration(v); setTimeLeft(v); }
+    });
+  }, []);
 
   // Listen for taken roles while on lobby
   const lobbyChannelRef = useRef(null);
@@ -1202,7 +1241,7 @@ export default function DealRushForm() {
   // Game timer
   useEffect(() => {
     if (gameState !== "playing") return;
-    setTimeLeft(GAME_DURATION);
+    setTimeLeft(gameDuration);
     playSound("gamestart", 0.6);
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
@@ -1245,7 +1284,7 @@ export default function DealRushForm() {
     });
     if (channelRef.current) { supabase.removeChannel(channelRef.current); channelRef.current = null; }
     setGameState("lobby"); setRole(null); setPlayer(null); setPartner(null);
-    setTimeLeft(GAME_DURATION); setMatchCount(0); setTotalCommission(0);
+    setTimeLeft(gameDuration); setMatchCount(0); setTotalCommission(0);
     setSelections({ ...emptySelection }); setListings([]); setBuyers([]); setMatchedDeals([]); idRef.current = 0;
   }, []);
 
@@ -1292,7 +1331,10 @@ export default function DealRushForm() {
       `}</style>
 
       {gameState === "lobby" && <LobbyScreen onJoin={handleJoin} onSettings={() => setGameState("settings")} onLeaderboard={() => setGameState("leaderboard")} takenRole={takenRole} takenByName={takenByName} />}
-      {gameState === "settings" && <SettingsPage onBack={() => setGameState("lobby")} />}
+      {gameState === "settings" && <SettingsPage onBack={() => setGameState("lobby")} gameDuration={gameDuration} onDurationChange={(v) => {
+        setGameDuration(v); setTimeLeft(v);
+        supabase.from("settings").upsert({ key: "game_duration", value: String(v) });
+      }} />}
       {gameState === "leaderboard" && <LeaderboardPage onBack={() => setGameState("lobby")} />}
       {gameState === "waiting" && <WaitingScreen player={player} role={role} onExit={handleReplay} />}
 
