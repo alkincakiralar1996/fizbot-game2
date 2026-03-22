@@ -1,21 +1,31 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "/src/supabase";
 
-// ─── Fizbot Brand Colors ───
+// ─── Fizbot Brand Colors (matching FizbotX app) ───
 const FB = {
-  navy: "#1E3A5F",
-  navyDark: "#152D4A",
-  navyLight: "#4A8BC2",
+  primary: "#1C46F5",
+  primaryLight: "#EEF1FE",
+  primary100: "#D4DBFD",
+  primary200: "#A9B7FB",
+  primary400: "#536FF7",
+  primary700: "#0828A8",
+  primary900: "#041246",
   coral: "#E8573E",
   coralLight: "#F47B63",
   gold: "#FBBF24",
-  bg: "#0F172A",
-  card: "#1E293B",
-  border: "#334155",
-  text: "#F1F5F9",
-  textSec: "#94A3B8",
-  textTer: "#64748B",
-  textDim: "#475569",
+  success: "#22C55E",
+  error: "#EF4444",
+  warning: "#F59E0B",
+  bg: "#F8FAFC",
+  bgSec: "#F1F5F9",
+  bgTer: "#E2E8F0",
+  card: "#FFFFFF",
+  border: "#E2E8F0",
+  borderSec: "#CBD5E1",
+  text: "#0F172A",
+  textSec: "#64748B",
+  textTer: "#94A3B8",
+  textDim: "#CBD5E1",
 };
 
 const SIZES = ["T1", "T2", "T3"];
@@ -28,8 +38,8 @@ const LOCATIONS = [
 ];
 const PRICE_MATCH_MAP = { "€300k": "€200-400k", "€500k": "€400-600k", "€800k": "€600-800k" };
 const PRICE_TO_VALUE = { "€300k": 300000, "€500k": 500000, "€800k": 800000 };
-const GAME_DURATION = 30;
-const CHANNEL_NAME = "deal-rush-game";
+const GAME_DURATION = 300;
+const CHANNEL_NAME = "match-it-game";
 
 // ─── Sound Utility ───
 const audioCache = {};
@@ -47,8 +57,8 @@ function playSound(name, volume = 0.5) {
 function FizbotLogo({ size = 40 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40">
-      <circle cx="20" cy="20" r="18" stroke={FB.navyLight} strokeWidth="2" fill="none" />
-      <circle cx="20" cy="20" r="12" stroke={FB.navyLight} strokeWidth="2" fill="none" />
+      <circle cx="20" cy="20" r="18" stroke={FB.primary400} strokeWidth="2" fill="none" />
+      <circle cx="20" cy="20" r="12" stroke={FB.primary400} strokeWidth="2" fill="none" />
       <circle cx="20" cy="20" r="6" fill={FB.coral} />
     </svg>
   );
@@ -61,7 +71,7 @@ function MatchOverlay({ show }) {
     <div style={{
       position: "fixed", inset: 0, zIndex: 500,
       display: "flex", alignItems: "center", justifyContent: "center",
-      background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
+      background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)",
       animation: "matchFade 1.6s ease-out forwards", pointerEvents: "none",
     }}>
       <div style={{ animation: "matchPop 1.6s ease-out forwards" }}>
@@ -71,7 +81,7 @@ function MatchOverlay({ show }) {
           letterSpacing: 8, fontFamily: "system-ui", textAlign: "center",
         }}>MATCH!</div>
         <div style={{
-          fontSize: 18, color: FB.navyLight, textAlign: "center", marginTop: 8,
+          fontSize: 18, color: FB.primary400, textAlign: "center", marginTop: 8,
           fontFamily: "system-ui", letterSpacing: 2,
         }}>+1 Deal Closed</div>
       </div>
@@ -81,19 +91,19 @@ function MatchOverlay({ show }) {
 
 // ─── Mini Card ───
 function MiniCard({ item, isMatched, isNew, side }) {
-  const borderColor = isMatched ? FB.navyLight : (side === "listing" ? "#60A5FA" : "#F472B6");
-  const bgColor = isMatched ? `rgba(30,58,95,0.2)` : "rgba(30,41,59,0.8)";
+  const borderColor = isMatched ? FB.primary400 : (side === "listing" ? "#60A5FA" : "#F472B6");
+  const bgColor = isMatched ? `rgba(28,70,245,0.2)` : "rgba(241,245,249,0.9)";
   const anim = isNew && isMatched ? "cardMatchIn 0.6s ease-out" : "slideFromLeft 0.3s ease-out";
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 6,
       background: bgColor, border: `1.5px solid ${borderColor}`,
-      borderRadius: 8, padding: "5px 8px", fontSize: 10, color: "#CBD5E1",
+      borderRadius: 8, padding: "5px 8px", fontSize: 10, color: FB.textSec,
       animation: anim, flexShrink: 0,
-      boxShadow: isMatched && isNew ? `0 0 12px rgba(30,58,95,0.5)` : "none",
+      boxShadow: isMatched && isNew ? `0 0 12px rgba(28,70,245,0.5)` : "none",
     }}>
-      {isMatched && <span style={{ color: FB.navyLight, fontWeight: 800, fontSize: 11 }}>✓</span>}
-      <span style={{ fontWeight: 600, color: isMatched ? FB.navyLight : borderColor }}>{item.propertyType === "Apartment" ? "Apt" : "Villa"}</span>
+      {isMatched && <span style={{ color: FB.primary400, fontWeight: 800, fontSize: 11 }}>✓</span>}
+      <span style={{ fontWeight: 600, color: isMatched ? FB.primary400 : borderColor }}>{item.propertyType === "Apartment" ? "Apt" : "Villa"}</span>
       <span style={{ color: FB.textTer }}>·</span>
       <span>{item.size}</span>
       <span style={{ color: FB.textTer }}>·</span>
@@ -124,7 +134,7 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
     return () => clearInterval(t);
   }, [phase, matches, commission]);
 
-  const colors = [FB.navyLight, "#3B82F6", "#F472B6", FB.gold, "#8B5CF6", "#06B6D4", FB.coral, "#F97316"];
+  const colors = [FB.primary400, "#3B82F6", "#F472B6", FB.gold, "#8B5CF6", "#06B6D4", FB.coral, "#F97316"];
   const particles = useMemo(() => {
     const p = [];
     for (let b = 0; b < 8; b++) {
@@ -152,7 +162,7 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center",
-      background: "rgba(15,23,42,0.97)", backdropFilter: "blur(10px)", animation: "fadeIn 0.5s", overflow: "auto",
+      background: "rgba(0,0,0,0.5)", backdropFilter: "blur(10px)", animation: "fadeIn 0.5s", overflow: "auto",
     }}>
       {particles.map(p => (
         <div key={p.k} style={{
@@ -174,12 +184,12 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
             </div>
             <div style={{
               fontSize: 72, fontWeight: 900, fontFamily: "system-ui",
-              background: `linear-gradient(135deg,${FB.navyLight},${FB.coral})`,
+              background: `linear-gradient(135deg,${FB.primary400},${FB.coral})`,
               WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1,
-              filter: `drop-shadow(0 4px 20px rgba(30,58,95,0.5))`,
+              filter: `drop-shadow(0 4px 20px rgba(28,70,245,0.5))`,
               animation: "numberPop 0.3s ease-out",
             }}>{displayMatches}</div>
-            <div style={{ fontSize: 16, color: FB.navyLight, fontFamily: "system-ui", fontWeight: 700, marginTop: 4, letterSpacing: 3, textTransform: "uppercase" }}>
+            <div style={{ fontSize: 16, color: FB.primary400, fontFamily: "system-ui", fontWeight: 700, marginTop: 4, letterSpacing: 3, textTransform: "uppercase" }}>
               Deals matched
             </div>
             <div style={{
@@ -200,15 +210,15 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
                     return (
                       <div key={deal.id} style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
-                        background: `rgba(30,58,95,0.1)`, border: `1px solid rgba(30,58,95,0.3)`,
+                        background: `rgba(28,70,245,0.1)`, border: `1px solid rgba(28,70,245,0.3)`,
                         borderRadius: 10, padding: "10px 14px",
                         animation: `dealReveal 0.5s ${0.3 + i * 0.15}s ease-out both`,
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <div style={{
-                            width: 28, height: 28, borderRadius: 8, background: `rgba(30,58,95,0.2)`,
+                            width: 28, height: 28, borderRadius: 8, background: `rgba(28,70,245,0.2)`,
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 13, fontWeight: 800, color: FB.navyLight,
+                            fontSize: 13, fontWeight: 800, color: FB.primary400,
                           }}>#{i + 1}</div>
                           <div>
                             <div style={{ fontSize: 13, fontWeight: 700, color: FB.text }}>{deal.listing.propertyType} · {deal.listing.size} · {deal.listing.location}</div>
@@ -227,9 +237,9 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
             )}
             <button onClick={() => setPhase("leaderboard")} style={{
               marginTop: 24, padding: "12px 40px", fontSize: 14, fontWeight: 700, fontFamily: "system-ui",
-              color: FB.text, background: `linear-gradient(135deg,${FB.navy},${FB.navyLight})`, border: "none",
+              color: "#FFFFFF", background: `linear-gradient(135deg,${FB.primary},${FB.primary400})`, border: "none",
               borderRadius: 12, cursor: "pointer", textTransform: "uppercase", letterSpacing: 2,
-              boxShadow: `0 4px 20px rgba(30,58,95,0.5)`, transition: "transform 0.15s",
+              boxShadow: `0 4px 20px rgba(28,70,245,0.5)`, transition: "transform 0.15s",
             }}
               onMouseOver={e => e.currentTarget.style.transform = "scale(1.05)"}
               onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
@@ -250,14 +260,14 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
                 return (
                   <div key={`${entry.team}-${i}`} style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
-                    background: isPlayer ? `rgba(30,58,95,0.15)` : "rgba(30,41,59,0.6)",
-                    border: `1.5px solid ${isPlayer ? `rgba(74,139,194,0.5)` : FB.border}`,
+                    background: isPlayer ? `rgba(28,70,245,0.15)` : "rgba(241,245,249,0.9)",
+                    border: `1.5px solid ${isPlayer ? `rgba(28,70,245,0.5)` : FB.border}`,
                     borderRadius: 12, padding: "12px 16px",
                     animation: isPlayer ? `lbPlayerSlide 0.8s ${0.3 + i * 0.12}s ease-out both` : `lbRowFade 0.4s ${0.1 + i * 0.1}s ease-out both`,
-                    boxShadow: isPlayer ? `0 0 20px rgba(30,58,95,0.3)` : "none",
+                    boxShadow: isPlayer ? `0 0 20px rgba(28,70,245,0.3)` : "none",
                     position: "relative", overflow: "hidden",
                   }}>
-                    {isPlayer && <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg,transparent,rgba(74,139,194,0.08),transparent)`, animation: "lbShine 2s 1.5s ease-in-out" }} />}
+                    {isPlayer && <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg,transparent,rgba(28,70,245,0.08),transparent)`, animation: "lbShine 2s 1.5s ease-in-out" }} />}
                     <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
                       <div style={{
                         width: 32, height: 32, borderRadius: 10,
@@ -266,7 +276,7 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
                         fontSize: 14, fontWeight: 900, color: medal || FB.textTer,
                       }}>{entry.rank}</div>
                       <div style={{ textAlign: "left" }}>
-                        <div style={{ fontSize: 14, fontWeight: isPlayer ? 800 : 600, color: isPlayer ? FB.navyLight : FB.text }}>
+                        <div style={{ fontSize: 14, fontWeight: isPlayer ? 800 : 600, color: isPlayer ? FB.primary400 : FB.text }}>
                           {entry.team} {isPlayer && "⬅"}
                         </div>
                         <div style={{ fontSize: 10, color: FB.textTer }}>{entry.matches} matches</div>
@@ -279,9 +289,9 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
             </div>
             <button onClick={() => setPhase("fizbot")} style={{
               marginTop: 28, padding: "14px 48px", fontSize: 15, fontWeight: 700, fontFamily: "system-ui",
-              color: FB.text, background: `linear-gradient(135deg,${FB.navy},${FB.navyLight})`, border: "none",
+              color: "#FFFFFF", background: `linear-gradient(135deg,${FB.primary},${FB.primary400})`, border: "none",
               borderRadius: 12, cursor: "pointer", textTransform: "uppercase", letterSpacing: 2,
-              boxShadow: `0 4px 20px rgba(30,58,95,0.5)`, transition: "transform 0.15s",
+              boxShadow: `0 4px 20px rgba(28,70,245,0.5)`, transition: "transform 0.15s",
             }}
               onMouseOver={e => e.currentTarget.style.transform = "scale(1.05)"}
               onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
@@ -292,17 +302,11 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
         {/* ─── FIZBOT PROMO ─── */}
         {phase === "fizbot" && (
           <div style={{ textAlign: "center", animation: "fadeIn 0.8s ease-out" }}>
-            <div style={{
-              width: 80, height: 80, borderRadius: "50%",
-              background: `linear-gradient(135deg, ${FB.navy}, ${FB.navyLight})`,
-              border: `3px solid ${FB.navyLight}`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 28px",
-              boxShadow: `0 0 40px rgba(30,58,95,0.5)`,
+            <img src="/fizbot-icon.png" alt="Fizbot" style={{
+              width: 80, height: 80, borderRadius: 20, margin: "0 auto 28px",
+              boxShadow: "0 4px 24px rgba(28,70,245,0.3)",
               animation: "pulse4 3s infinite",
-            }}>
-              <FizbotLogo size={44} />
-            </div>
+            }} />
 
             <div style={{
               fontSize: 16, letterSpacing: 6, color: FB.textSec, fontWeight: 700,
@@ -321,17 +325,17 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
               fontSize: 30, fontWeight: 900, marginBottom: 40,
               animation: "fadeIn 0.5s 0.6s ease-out both",
             }}>
-              It's Time to <span style={{ color: FB.navyLight }}>Match</span> &{" "}
+              It's Time to <span style={{ color: FB.primary400 }}>Match</span> &{" "}
               <span style={{ color: FB.coral }}>Close</span>
             </div>
 
             <a href="https://fizbot.net" target="_blank" rel="noopener noreferrer" style={{
               display: "inline-block", padding: "18px 52px",
-              fontSize: 17, fontWeight: 800, color: FB.text,
-              background: `linear-gradient(135deg, ${FB.navy}, ${FB.navyLight})`,
-              border: `2px solid ${FB.navyLight}`, borderRadius: 16,
+              fontSize: 17, fontWeight: 800, color: "#FFFFFF",
+              background: `linear-gradient(135deg, ${FB.primary}, ${FB.primary400})`,
+              border: `2px solid ${FB.primary400}`, borderRadius: 16,
               textDecoration: "none", letterSpacing: 3,
-              boxShadow: `0 4px 30px rgba(30,58,95,0.6)`,
+              boxShadow: `0 4px 30px rgba(28,70,245,0.6)`,
               animation: "pulse4 2.5s infinite, fadeIn 0.5s 0.8s ease-out both",
               transition: "transform 0.15s",
             }}
@@ -369,28 +373,28 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
 
   const Chip = ({ label: chipLabel, selected, onClick }) => (
     <div key={selected ? "sel" : "un"} onClick={disabled ? undefined : onClick} style={{
-      flex: "1 1 22%", background: selected ? accentBg : FB.card,
-      border: `1.5px solid ${selected ? accentBorder : FB.border}`,
-      borderRadius: 10, padding: "10px 6px", textAlign: "center",
+      flex: "1 1 22%", background: selected ? accentBg : "#FFFFFF",
+      border: `2px solid ${selected ? accentBorder : FB.border}`,
+      borderRadius: 14, padding: "14px 8px", textAlign: "center",
       cursor: disabled ? "default" : "pointer", transition: "all 0.15s",
       userSelect: "none", WebkitTapHighlightColor: "transparent",
       animation: selected ? "chipBounce 0.3s ease-out" : "none",
     }}>
-      <span style={{ fontSize: 13, fontWeight: selected ? 700 : 500, color: selected ? accent : FB.textSec }}>{chipLabel}</span>
+      <span style={{ fontSize: 16, fontWeight: selected ? 700 : 500, color: selected ? accent : FB.textSec }}>{chipLabel}</span>
     </div>
   );
 
   const TypeChip = ({ label: chipLabel, icon, selected, onClick }) => (
     <div onClick={disabled ? undefined : onClick} style={{
-      flex: "1 1 45%", background: selected ? accentBg : FB.card,
-      border: `1.5px solid ${selected ? accentBorder : FB.border}`,
-      borderRadius: 12, padding: "14px 10px", textAlign: "center",
+      flex: "1 1 45%", background: selected ? accentBg : "#FFFFFF",
+      border: `2px solid ${selected ? accentBorder : FB.border}`,
+      borderRadius: 16, padding: "18px 12px", textAlign: "center",
       cursor: disabled ? "default" : "pointer", transition: "all 0.15s",
       userSelect: "none", WebkitTapHighlightColor: "transparent",
       animation: selected ? "chipBounce 0.3s ease-out" : "none",
     }}>
-      <div style={{ marginBottom: 6 }}>{icon}</div>
-      <span style={{ fontSize: 14, fontWeight: selected ? 700 : 500, color: selected ? accent : FB.textSec }}>{chipLabel}</span>
+      <div style={{ marginBottom: 8 }}>{icon}</div>
+      <span style={{ fontSize: 16, fontWeight: selected ? 700 : 500, color: selected ? accent : FB.textSec }}>{chipLabel}</span>
     </div>
   );
 
@@ -412,22 +416,38 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
 
   const timerAnim = timeLeft <= 5 ? "timerShake 0.3s ease-in-out infinite" : timeLeft <= 10 ? "timerPulse 1s ease-in-out infinite" : "none";
 
+  const accentLight = isListing ? "#EEF1FE" : "#DCFCE7";
+
   return (
     <div style={{
       display: "flex", flexDirection: "column",
-      background: FB.bg, padding: "12px 20px 16px",
-      overflow: "auto", minHeight: "100vh", maxWidth: 480, margin: "0 auto", width: "100%",
+      background: FB.bg, padding: "0", overflow: "auto", minHeight: "100vh",
     }}>
-      <div style={{ textAlign: "center", marginBottom: 10 }}>
-        <div style={{ fontSize: 11, letterSpacing: 3, color: FB.textTer, fontWeight: 600, textTransform: "uppercase" }}>{playerName}</div>
-        <div style={{ fontSize: 20, fontWeight: 800, color: accent, marginTop: 2 }}>{label}</div>
-        <div style={{ fontSize: 10, color: FB.textDim, marginTop: 2 }}>Partner: {partnerName}</div>
+      {/* Header bar */}
+      <div style={{
+        background: `linear-gradient(135deg, ${accent}, ${isListing ? FB.primary400 : "#6BCB47"})`,
+        padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center",
+        boxShadow: `0 4px 16px ${accent}30`,
+      }}>
+        <div>
+          <div style={{ fontSize: 24, fontWeight: 900, color: "#FFFFFF" }}>{playerName}</div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 600, marginTop: 2 }}>{label} · Partner: {partnerName}</div>
+        </div>
+        {!disabled && (
+          <div onClick={onEndGame} style={{
+            padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#FFFFFF",
+            background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)",
+            borderRadius: 10, cursor: "pointer", textTransform: "uppercase", letterSpacing: 1,
+            userSelect: "none", backdropFilter: "blur(4px)",
+          }}>End Game</div>
+        )}
       </div>
 
+      {/* Stats bar */}
       <div style={{
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-        background: FB.card, borderRadius: 10, padding: "10px 14px", marginBottom: 14,
-        border: `1px solid ${FB.border}`, animation: timerAnim,
+        display: "flex", justifyContent: "space-around", alignItems: "center",
+        background: "#FFFFFF", padding: "14px 20px",
+        borderBottom: `1px solid ${FB.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{
@@ -436,100 +456,118 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
             animation: timeLeft <= 5 ? "blink 0.5s infinite" : "none",
           }} />
           <span style={{
-            fontSize: 26, fontWeight: 800, fontFamily: "monospace",
+            fontSize: 28, fontWeight: 900, fontFamily: "monospace",
             color: timeLeft <= 5 ? "#EF4444" : timeLeft <= 10 ? FB.gold : FB.text,
+            animation: timerAnim,
           }}>
             {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 13, color: FB.textSec }}>Matches</span>
-            <span style={{ fontSize: 20, fontWeight: 800, color: FB.navyLight }}>{matchCount}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ fontSize: 11, color: FB.textSec }}>Commission</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: FB.gold }}>€{(commission / 1000).toFixed(1)}k</span>
-          </div>
-          {!disabled && (
-            <div onClick={onEndGame} style={{
-              padding: "4px 10px", fontSize: 10, fontWeight: 700, color: "#EF4444",
-              background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)",
-              borderRadius: 6, cursor: "pointer", textTransform: "uppercase", letterSpacing: 1,
-              userSelect: "none",
-            }}>End</div>
-          )}
+        <div style={{ width: 1, height: 28, background: FB.border }} />
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 24, fontWeight: 900, color: accent }}>{matchCount}</div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: FB.textTer, textTransform: "uppercase", letterSpacing: 1 }}>Matches</div>
+        </div>
+        <div style={{ width: 1, height: 28, background: FB.border }} />
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: FB.gold }}>€{(commission / 1000).toFixed(1)}k</div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: FB.textTer, textTransform: "uppercase", letterSpacing: 1 }}>Commission</div>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 4, marginBottom: 14 }}>
+      {/* Progress bar */}
+      <div style={{ display: "flex", gap: 4, padding: "12px 24px 0" }}>
         {["propertyType", "size", "priceRange", "location"].map(f => (
-          <div key={f} style={{ flex: 1, height: 3, borderRadius: 2, background: selections[f] ? FB.navyLight : FB.border, transition: "background 0.3s" }} />
+          <div key={f} style={{ flex: 1, height: 4, borderRadius: 2, background: selections[f] ? accent : FB.border, transition: "background 0.3s" }} />
         ))}
       </div>
 
-      {(matchedDeals.length > 0 || pendingItems.length > 0) && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10, maxHeight: 80, overflow: "auto" }}>
-          {[...matchedDeals].reverse().map(deal => (
-            <MiniCard key={`m${deal.id}`} item={isListing ? deal.listing : deal.buyer} isMatched={true} isNew={deal.isNew} side={role} />
-          ))}
-          {pendingItems.map(item => (
-            <MiniCard key={`p${item.id}`} item={item} isMatched={false} isNew={false} side={role} />
+      {/* Content area */}
+      <div style={{ padding: "16px 24px 24px", maxWidth: 520, margin: "0 auto", width: "100%" }}>
+
+        {/* Mini cards */}
+        {(matchedDeals.length > 0 || pendingItems.length > 0) && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16, maxHeight: 90, overflow: "auto" }}>
+            {[...matchedDeals].reverse().map(deal => (
+              <MiniCard key={`m${deal.id}`} item={isListing ? deal.listing : deal.buyer} isMatched={true} isNew={deal.isNew} side={role} />
+            ))}
+            {pendingItems.map(item => (
+              <MiniCard key={`p${item.id}`} item={item} isMatched={false} isNew={false} side={role} />
+            ))}
+          </div>
+        )}
+
+        {/* Property type */}
+        <div style={{ fontSize: 13, color: FB.textSec, letterSpacing: 1, fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
+          {isListing ? "1. Property type" : "What are they looking for?"}
+        </div>
+        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+          <TypeChip label="Apartment" icon={houseIcon} selected={selections.propertyType === "Apartment"} onClick={() => onSelect("propertyType", "Apartment")} />
+          <TypeChip label="Villa" icon={villaIcon} selected={selections.propertyType === "Villa"} onClick={() => onSelect("propertyType", "Villa")} />
+        </div>
+
+        {/* Size */}
+        <div style={{ fontSize: 13, color: FB.textSec, letterSpacing: 1, fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
+          {isListing ? "2. Size" : "Size"}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {SIZES.map(s => <Chip key={s} label={s} selected={selections.size === s} onClick={() => onSelect("size", s)} />)}
+        </div>
+
+        {/* Price */}
+        <div style={{ fontSize: 13, color: FB.textSec, letterSpacing: 1, fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
+          {isListing ? "3. Price range" : "Budget range"}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          {(isListing ? LISTING_PRICES : BUYER_PRICES).map(p => <Chip key={p} label={p} selected={selections.priceRange === p} onClick={() => onSelect("priceRange", p)} />)}
+        </div>
+
+        {/* Location */}
+        <div style={{ fontSize: 13, color: FB.textSec, letterSpacing: 1, fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
+          {isListing ? "4. Location" : "Preferred area"}
+        </div>
+        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+          {LOCATIONS.map(l => (
+            <div key={l.name} onClick={disabled ? undefined : () => onSelect("location", l.name)} style={{
+              flex: 1, background: selections.location === l.name ? accentLight : "#FFFFFF",
+              border: `2px solid ${selections.location === l.name ? accent : FB.border}`,
+              borderRadius: 14, overflow: "hidden",
+              cursor: disabled ? "default" : "pointer", transition: "all 0.2s",
+              userSelect: "none", WebkitTapHighlightColor: "transparent",
+              boxShadow: selections.location === l.name ? `0 4px 12px ${accent}25` : "0 1px 4px rgba(0,0,0,0.04)",
+            }}>
+              <img src={l.img} alt={l.name} style={{ width: "100%", height: 70, objectFit: "cover", display: "block" }} />
+              <div style={{ padding: "10px 4px", textAlign: "center" }}>
+                <span style={{ fontSize: 14, fontWeight: selections.location === l.name ? 800 : 600, color: selections.location === l.name ? accent : FB.text }}>{l.name}</span>
+              </div>
+            </div>
           ))}
         </div>
-      )}
-
-      <div style={{ fontSize: 11, color: FB.textTer, letterSpacing: 1, fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>
-        {isListing ? "1. Property type" : "What are they looking for?"}
-      </div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-        <TypeChip label="Apartment" icon={houseIcon} selected={selections.propertyType === "Apartment"} onClick={() => onSelect("propertyType", "Apartment")} />
-        <TypeChip label="Villa" icon={villaIcon} selected={selections.propertyType === "Villa"} onClick={() => onSelect("propertyType", "Villa")} />
-      </div>
-
-      <div style={{ fontSize: 11, color: FB.textTer, letterSpacing: 1, fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>
-        {isListing ? "2. Size" : "Size"}
-      </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-        {SIZES.map(s => <Chip key={s} label={s} selected={selections.size === s} onClick={() => onSelect("size", s)} />)}
-      </div>
-
-      <div style={{ fontSize: 11, color: FB.textTer, letterSpacing: 1, fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>
-        {isListing ? "3. Price range" : "Budget range"}
-      </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-        {(isListing ? LISTING_PRICES : BUYER_PRICES).map(p => <Chip key={p} label={p} selected={selections.priceRange === p} onClick={() => onSelect("priceRange", p)} />)}
-      </div>
-
-      <div style={{ fontSize: 11, color: FB.textTer, letterSpacing: 1, fontWeight: 600, textTransform: "uppercase", marginBottom: 6 }}>
-        {isListing ? "4. Location" : "Preferred area"}
-      </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-        {LOCATIONS.map(l => (
-          <div key={l.name} onClick={disabled ? undefined : () => onSelect("location", l.name)} style={{
-            flex: 1, background: selections.location === l.name ? accentBg : FB.card,
-            border: `1.5px solid ${selections.location === l.name ? accentBorder : FB.border}`,
-            borderRadius: 10, overflow: "hidden",
-            cursor: disabled ? "default" : "pointer", transition: "all 0.15s",
-            userSelect: "none", WebkitTapHighlightColor: "transparent",
-          }}>
-            <img src={l.img} alt={l.name} style={{ width: "100%", height: 56, objectFit: "cover", display: "block" }} />
-            <div style={{ padding: "6px 4px", textAlign: "center" }}>
-              <span style={{ fontSize: 12, fontWeight: selections.location === l.name ? 700 : 500, color: selections.location === l.name ? accent : FB.textSec }}>{l.name}</span>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
 }
 
 // ─── Lobby Screen ───
-function LobbyScreen({ onJoin, onSettings, onLeaderboard }) {
+function LobbyScreen({ onJoin, onSettings, onLeaderboard, takenRole, takenByName }) {
   const [name, setName] = useState("");
   const [office, setOffice] = useState("");
+  const [officeSearch, setOfficeSearch] = useState("");
+  const [offices, setOffices] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [revealed, setRevealed] = useState(0);
-  const title = "Deal Rush";
+  const title = "Match It!";
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    fetch("/offices.csv").then(r => r.text()).then(csv => {
+      const lines = csv.trim().split("\n").slice(1);
+      setOffices(lines.map(l => {
+        const [id, name] = l.split(",");
+        return { id, name };
+      }));
+    });
+  }, []);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -538,17 +576,32 @@ function LobbyScreen({ onJoin, onSettings, onLeaderboard }) {
     return () => clearInterval(t);
   }, []);
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filteredOffices = officeSearch
+    ? offices.filter(o => o.name.toLowerCase().includes(officeSearch.toLowerCase()))
+    : offices;
+
   const inputStyle = {
-    width: "100%", padding: "14px 16px", fontSize: 15, fontWeight: 500,
-    background: FB.card, border: `1.5px solid ${FB.border}`, borderRadius: 12,
+    width: "100%", padding: "18px 20px", fontSize: 18, fontWeight: 500,
+    background: "#FFFFFF", border: `1.5px solid ${FB.border}`, borderRadius: 14,
     color: FB.text, outline: "none", fontFamily: "system-ui", transition: "border-color 0.2s",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
   };
   const canJoin = name.trim() && office.trim();
 
   return (
     <div style={{
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      minHeight: "100vh", padding: 32, background: FB.bg, position: "relative",
+      minHeight: "100vh", padding: 32, position: "relative",
+      background: `linear-gradient(180deg, #EEF1FE 0%, ${FB.bg} 40%, ${FB.bg} 100%)`,
     }}>
       <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8 }}>
         <div onClick={onLeaderboard} style={{
@@ -572,79 +625,193 @@ function LobbyScreen({ onJoin, onSettings, onLeaderboard }) {
         </div>
       </div>
 
-      <div style={{
-        width: 64, height: 64, borderRadius: 18,
-        background: `rgba(30,58,95,0.15)`, border: `1px solid rgba(74,139,194,0.3)`,
-        display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20,
-        animation: "pulse4 3s infinite",
-      }}>
-        <FizbotLogo size={32} />
-      </div>
+      <img src="/fizbot-icon.png" alt="Fizbot" style={{
+        width: 100, height: 100, borderRadius: 24, marginBottom: 28,
+        boxShadow: "0 8px 24px rgba(28,70,245,0.2)",
+      }} />
 
-      <div style={{ fontSize: 13, letterSpacing: 5, color: FB.textTer, marginBottom: 10, textTransform: "uppercase", fontWeight: 600 }}>
-        Property match
-      </div>
       <div style={{
-        fontSize: 42, fontWeight: 900, textAlign: "center", lineHeight: 1.1, marginBottom: 32,
-        background: `linear-gradient(135deg,${FB.navyLight},${FB.coral})`,
+        fontSize: 56, fontWeight: 900, textAlign: "center", lineHeight: 1.1, marginBottom: 40,
+        background: `linear-gradient(135deg,${FB.primary400},${FB.coral})`,
         WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
         minHeight: 46,
       }}>
         {title.slice(0, revealed)}
-        <span style={{ borderRight: revealed < title.length ? `3px solid ${FB.navyLight}` : "none", animation: revealed < title.length ? "blink 0.8s infinite" : "none" }}>&nbsp;</span>
+        <span style={{ borderRight: revealed < title.length ? `3px solid ${FB.primary400}` : "none", animation: revealed < title.length ? "blink 0.8s infinite" : "none" }}>&nbsp;</span>
       </div>
 
-      <div style={{ width: "100%", maxWidth: 340, display: "flex", flexDirection: "column", gap: 12, marginBottom: 28 }}>
+      <div style={{ width: "100%", maxWidth: 440, display: "flex", flexDirection: "column", gap: 16, marginBottom: 32 }}>
         <input style={inputStyle} placeholder="Your name" value={name} onChange={e => setName(e.target.value)}
-          onFocus={e => e.target.style.borderColor = FB.navyLight} onBlur={e => e.target.style.borderColor = FB.border} />
-        <input style={inputStyle} placeholder="Office name" value={office} onChange={e => setOffice(e.target.value)}
-          onFocus={e => e.target.style.borderColor = FB.navyLight} onBlur={e => e.target.style.borderColor = FB.border} />
+          onFocus={e => e.target.style.borderColor = FB.primary400} onBlur={e => e.target.style.borderColor = FB.border} />
+        <div ref={dropdownRef} style={{ position: "relative", width: "100%" }}>
+          <input style={inputStyle} placeholder="Search office..."
+            value={showDropdown ? officeSearch : office}
+            onChange={e => { setOfficeSearch(e.target.value); setOffice(e.target.value); setShowDropdown(true); }}
+            onFocus={e => { e.target.style.borderColor = FB.primary400; setShowDropdown(true); setOfficeSearch(office); }}
+            onBlur={e => { e.target.style.borderColor = FB.border; }}
+          />
+          {showDropdown && filteredOffices.length > 0 && (
+            <div style={{
+              position: "absolute", top: "100%", left: 0, right: 0, marginTop: 4,
+              background: "#FFFFFF", border: `1px solid ${FB.border}`, borderRadius: 12,
+              boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: 280, overflowY: "auto",
+            }}>
+              {filteredOffices.map(o => (
+                <div key={o.id} onMouseDown={() => { setOffice(o.name); setOfficeSearch(o.name); setShowDropdown(false); }}
+                  style={{
+                    padding: "10px 16px", fontSize: 14, color: FB.text, cursor: "pointer",
+                    background: office === o.name ? FB.primaryLight : "transparent",
+                    borderBottom: `1px solid ${FB.border}`,
+                  }}
+                  onMouseOver={e => e.currentTarget.style.background = FB.bgTer}
+                  onMouseOut={e => e.currentTarget.style.background = office === o.name ? FB.primaryLight : "transparent"}
+                >{o.name}</div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div style={{ display: "flex", gap: 12, width: "100%", maxWidth: 340 }}>
-        <button onClick={() => canJoin && onJoin(name.trim(), office.trim(), "listing")} style={{
-          flex: 1, padding: "16px", fontSize: 14, fontWeight: 800, fontFamily: "system-ui",
-          color: canJoin ? FB.bg : FB.textTer, background: canJoin ? "#60A5FA" : FB.card,
-          border: canJoin ? "none" : `1px solid ${FB.border}`,
-          borderRadius: 14, cursor: canJoin ? "pointer" : "default",
-          textTransform: "uppercase", letterSpacing: 2, transition: "all 0.2s",
-        }}>Listing Agent</button>
-        <button onClick={() => canJoin && onJoin(name.trim(), office.trim(), "buyer")} style={{
-          flex: 1, padding: "16px", fontSize: 14, fontWeight: 800, fontFamily: "system-ui",
-          color: canJoin ? FB.bg : FB.textTer, background: canJoin ? "#F472B6" : FB.card,
-          border: canJoin ? "none" : `1px solid ${FB.border}`,
-          borderRadius: 14, cursor: canJoin ? "pointer" : "default",
-          textTransform: "uppercase", letterSpacing: 2, transition: "all 0.2s",
-        }}>Buyer Agent</button>
+      {/* Divider + Choose your side */}
+      <div style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", maxWidth: 440, margin: "6px 0 18px" }}>
+        <div style={{ flex: 1, height: 1, background: FB.border }} />
+        <span style={{ fontSize: 15, letterSpacing: 4, color: FB.textSec, textTransform: "uppercase", fontWeight: 700, whiteSpace: "nowrap" }}>Choose your side</span>
+        <div style={{ flex: 1, height: 1, background: FB.border }} />
       </div>
 
-      <div style={{ marginTop: 16, fontSize: 11, color: FB.textDim, textAlign: "center" }}>
-        Choose your role. First player waits, game starts when both join.
+      <div style={{ display: "flex", gap: 16, width: "100%", maxWidth: 440 }}>
+        {[
+          { role: "listing", label: "Listing Agent", color: FB.primary, lightBg: "#EEF1FE", borderLight: "#D4DBFD",
+            icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+          { role: "buyer", label: "Buyer Agent", color: "#54B329", lightBg: "#DCFCE7", borderLight: "#DCFCE7",
+            icon: <svg width="28" height="28" viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
+        ].map(btn => {
+          const isTaken = takenRole === btn.role;
+          const canClick = canJoin && !isTaken;
+          return (
+            <button key={btn.role} onClick={() => canClick && onJoin(name.trim(), office.trim(), btn.role)} style={{
+              flex: 1, padding: "24px 20px", fontSize: 15, fontWeight: 800, fontFamily: "system-ui",
+              color: isTaken ? FB.textTer : canClick ? "#FFFFFF" : btn.color,
+              background: isTaken ? FB.bgSec : canClick ? btn.color : "#FFFFFF",
+              border: `2px solid ${isTaken ? FB.border : canClick ? btn.color : btn.borderLight}`,
+              borderRadius: 18, cursor: isTaken ? "not-allowed" : canClick ? "pointer" : "default",
+              textTransform: "uppercase", letterSpacing: 3, transition: "all 0.25s",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10,
+              boxShadow: isTaken ? "none" : canClick ? `0 6px 20px ${btn.color}55` : `0 2px 8px ${btn.color}15`,
+              opacity: isTaken ? 0.7 : 1,
+            }}
+              onMouseOver={e => { if (canClick) e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseOut={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+            >
+              <div style={{
+                width: 52, height: 52, borderRadius: 16,
+                background: isTaken ? FB.border : canClick ? "rgba(255,255,255,0.2)" : btn.lightBg,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {React.cloneElement(btn.icon, { stroke: isTaken ? FB.textTer : canClick ? "#FFFFFF" : btn.color })}
+              </div>
+              {btn.label}
+              {isTaken && (
+                <div style={{ fontSize: 11, fontWeight: 600, color: FB.textTer, textTransform: "none", letterSpacing: 0, marginTop: -4 }}>
+                  {takenByName} joined
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
+
     </div>
   );
 }
 
 // ─── Waiting Screen ───
-function WaitingScreen({ player, role }) {
-  const accent = role === "listing" ? "#60A5FA" : "#F472B6";
+function WaitingScreen({ player, role, onExit }) {
+  const isListing = role === "listing";
+  const accent = isListing ? FB.primary : "#54B329";
+  const accentBg = isListing ? "#EEF1FE" : "#DCFCE7";
+  const roleName = isListing ? "Listing Agent" : "Buyer Agent";
+  const roleIcon = isListing ? (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+    </svg>
+  ) : (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  );
+
   return (
     <div style={{
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      minHeight: "100vh", padding: 32, background: FB.bg,
+      minHeight: "100vh", padding: 32,
+      background: `linear-gradient(180deg, ${accentBg} 0%, ${FB.bg} 50%)`,
     }}>
+      {/* Icon with spinning ring */}
       <div style={{
-        width: 48, height: 48, borderRadius: "50%", border: `3px solid ${accent}`,
-        borderTopColor: "transparent", animation: "spin 1s linear infinite", marginBottom: 24,
-      }} />
-      <div style={{ fontSize: 20, fontWeight: 800, color: FB.text, fontFamily: "system-ui", marginBottom: 8 }}>
+        width: 110, height: 110, position: "relative",
+        display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 24,
+      }}>
+        <div style={{
+          width: 80, height: 80, borderRadius: "50%", background: "#FFFFFF",
+          border: `2px solid ${FB.border}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          position: "relative", zIndex: 1,
+          boxShadow: `0 4px 20px rgba(0,0,0,0.06)`,
+        }}>
+          {roleIcon}
+        </div>
+        <div style={{
+          position: "absolute", inset: 0,
+          borderRadius: "50%",
+          border: `2.5px solid ${accent}15`,
+          borderTopColor: accent,
+          animation: "spin 1.8s cubic-bezier(0.4,0,0.2,1) infinite",
+        }} />
+      </div>
+
+      {/* Name */}
+      <div style={{ fontSize: 40, fontWeight: 900, color: FB.text, fontFamily: "system-ui", marginBottom: 10, textAlign: "center" }}>
+        {player.name}
+      </div>
+
+      {/* Role badge */}
+      <div style={{
+        display: "inline-flex", alignItems: "center", gap: 8,
+        padding: "8px 20px", borderRadius: 20,
+        background: accentBg, border: `1.5px solid ${accent}33`,
+        marginBottom: 40,
+      }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: accent, animation: "pulse4 2s infinite" }} />
+        <span style={{ fontSize: 15, fontWeight: 700, color: accent, letterSpacing: 1 }}>{roleName}</span>
+      </div>
+
+      {/* Waiting text */}
+      <div style={{ fontSize: 18, fontWeight: 600, color: FB.textSec, marginBottom: 16 }}>
         Waiting for partner...
       </div>
-      <div style={{ fontSize: 14, color: FB.textSec, marginBottom: 4 }}>{player.name} ({player.office})</div>
-      <div style={{ fontSize: 13, color: accent, fontWeight: 700 }}>{role === "listing" ? "Listing Agent" : "Buyer Agent"}</div>
-      <div style={{ marginTop: 24, fontSize: 12, color: FB.textDim, textAlign: "center", maxWidth: 300 }}>
-        Share the website link with your partner. The game will start automatically when both players are connected.
+
+      {/* Animated dots */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 48 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={{
+            width: 10, height: 10, borderRadius: "50%", background: accent,
+            opacity: 0.3, animation: `dotPulse 1.4s ${i * 0.2}s ease-in-out infinite`,
+          }} />
+        ))}
       </div>
+
+      {/* Exit button */}
+      <button onClick={onExit} style={{
+        padding: "12px 36px", fontSize: 14, fontWeight: 700, fontFamily: "system-ui",
+        color: FB.error, background: "#FFFFFF",
+        border: `1.5px solid ${FB.error}33`, borderRadius: 12,
+        cursor: "pointer", transition: "all 0.2s",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+      }}
+        onMouseOver={e => { e.currentTarget.style.background = "#FEE2E2"; }}
+        onMouseOut={e => { e.currentTarget.style.background = "#FFFFFF"; }}
+      >Exit</button>
     </div>
   );
 }
@@ -676,46 +843,69 @@ function SettingsPage({ onBack }) {
   const totalComm = games.reduce((s, g) => s + Number(g.total_commission), 0);
 
   return (
-    <div style={{ minHeight: "100vh", background: FB.bg, color: FB.text, fontFamily: "system-ui,-apple-system,sans-serif", padding: "20px 24px", maxWidth: 600, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-        <div onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: FB.textSec, fontSize: 14, fontWeight: 600 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke={FB.textSec} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    <div style={{ minHeight: "100vh", background: FB.bg, color: FB.text, fontFamily: "system-ui,-apple-system,sans-serif" }}>
+      {/* Header */}
+      <div style={{
+        background: "#FFFFFF", padding: "20px 28px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        borderBottom: `1px solid ${FB.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+      }}>
+        <div onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: FB.textSec, fontSize: 16, fontWeight: 600 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke={FB.textSec} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Back
         </div>
-        <div style={{ fontSize: 18, fontWeight: 800 }}>Settings</div>
-        <div style={{ width: 60 }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" stroke={FB.textSec} strokeWidth="2" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke={FB.textSec} strokeWidth="2" />
+          </svg>
+          <span style={{ fontSize: 22, fontWeight: 800 }}>Settings</span>
+        </div>
+        <div style={{ width: 70 }} />
       </div>
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        {[{ label: "Total Games", value: games.length, color: "#60A5FA" }, { label: "Total Matches", value: totalMatches, color: FB.navyLight }, { label: "Total Commission", value: `€${totalComm.toLocaleString()}`, color: FB.gold }].map(s => (
-          <div key={s.label} style={{ flex: 1, background: FB.card, border: `1px solid ${FB.border}`, borderRadius: 12, padding: "12px 10px", textAlign: "center" }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 10, color: FB.textTer, marginTop: 2 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-      <button onClick={clearAll} disabled={clearing || games.length === 0} style={{
-        width: "100%", padding: "12px", fontSize: 13, fontWeight: 700, color: games.length === 0 ? FB.textDim : "#EF4444",
-        background: games.length === 0 ? FB.card : "rgba(239,68,68,0.1)", border: `1px solid ${games.length === 0 ? FB.border : "rgba(239,68,68,0.3)"}`,
-        borderRadius: 10, cursor: games.length === 0 ? "default" : "pointer", textTransform: "uppercase", letterSpacing: 2, marginBottom: 20, fontFamily: "system-ui",
-      }}>{clearing ? "Clearing..." : "Clear all data"}</button>
-      <div style={{ fontSize: 12, color: FB.textTer, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 10 }}>Game history ({games.length})</div>
-      {loading ? <div style={{ textAlign: "center", color: FB.textDim, padding: 40 }}>Loading...</div> : games.length === 0 ? <div style={{ textAlign: "center", color: FB.textDim, padding: 40 }}>No games yet</div> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {games.map(g => (
-            <div key={g.id} style={{ background: FB.card, border: `1px solid ${FB.border}`, borderRadius: 12, padding: "12px 16px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: FB.text }}>{g.player1_name} & {g.player2_name}</div>
-                <div style={{ fontSize: 10, color: FB.textDim }}>{new Date(g.played_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
-              </div>
-              <div style={{ display: "flex", gap: 16, fontSize: 12 }}>
-                <div><span style={{ color: FB.textTer }}>Office: </span><span style={{ color: FB.textSec }}>{g.player1_office}</span></div>
-                <div><span style={{ color: FB.textTer }}>Matches: </span><span style={{ color: FB.navyLight, fontWeight: 700 }}>{g.matches}</span></div>
-                <div><span style={{ color: FB.textTer }}>Commission: </span><span style={{ color: FB.gold, fontWeight: 700 }}>€{Number(g.total_commission).toLocaleString()}</span></div>
-              </div>
+
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: "24px 28px" }}>
+        {/* Stats */}
+        <div style={{ display: "flex", gap: 14, marginBottom: 24 }}>
+          {[{ label: "Total Games", value: games.length, color: FB.primary }, { label: "Total Matches", value: totalMatches, color: "#54B329" }, { label: "Total Commission", value: `€${totalComm.toLocaleString()}`, color: FB.gold }].map(s => (
+            <div key={s.label} style={{ flex: 1, background: "#FFFFFF", border: `2px solid ${FB.border}`, borderRadius: 16, padding: "18px 14px", textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+              <div style={{ fontSize: 26, fontWeight: 900, color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: 12, color: FB.textTer, marginTop: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>{s.label}</div>
             </div>
           ))}
         </div>
-      )}
+
+        {/* Clear button */}
+        <button onClick={clearAll} disabled={clearing || games.length === 0} style={{
+          width: "100%", padding: "14px", fontSize: 14, fontWeight: 700, color: games.length === 0 ? FB.textDim : FB.error,
+          background: games.length === 0 ? "#FFFFFF" : "#FEE2E2", border: `1.5px solid ${games.length === 0 ? FB.border : FB.error + "33"}`,
+          borderRadius: 14, cursor: games.length === 0 ? "default" : "pointer", textTransform: "uppercase", letterSpacing: 2, marginBottom: 28, fontFamily: "system-ui",
+        }}>{clearing ? "Clearing..." : "Clear all data"}</button>
+
+        {/* Game history */}
+        <div style={{ fontSize: 14, color: FB.textSec, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, marginBottom: 14 }}>Game history ({games.length})</div>
+        {loading ? (
+          <div style={{ textAlign: "center", color: FB.textTer, padding: 60 }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", border: `3px solid ${FB.border}`, borderTopColor: FB.primary, animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
+            Loading...
+          </div>
+        ) : games.length === 0 ? <div style={{ textAlign: "center", color: FB.textTer, padding: 60, fontSize: 16 }}>No games yet</div> : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {games.map(g => (
+              <div key={g.id} style={{ background: "#FFFFFF", border: `1.5px solid ${FB.border}`, borderRadius: 16, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <div style={{ fontSize: 17, fontWeight: 800, color: FB.text }}>{g.player1_name} & {g.player2_name}</div>
+                  <div style={{ fontSize: 12, color: FB.textTer }}>{new Date(g.played_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</div>
+                </div>
+                <div style={{ display: "flex", gap: 20, fontSize: 14 }}>
+                  <div><span style={{ color: FB.textTer }}>Office: </span><span style={{ color: FB.textSec, fontWeight: 600 }}>{g.player1_office}</span></div>
+                  <div><span style={{ color: FB.textTer }}>Matches: </span><span style={{ color: FB.primary, fontWeight: 700 }}>{g.matches}</span></div>
+                  <div><span style={{ color: FB.textTer }}>Commission: </span><span style={{ color: FB.gold, fontWeight: 700 }}>€{Number(g.total_commission).toLocaleString()}</span></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -757,48 +947,57 @@ function LeaderboardPage({ onBack }) {
 
   return (
     <div style={{ minHeight: "100vh", background: FB.bg, color: FB.text, fontFamily: "system-ui,-apple-system,sans-serif" }}>
-      <div style={{ padding: "20px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `1px solid ${FB.card}` }}>
-        <div onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: FB.textSec, fontSize: 14, fontWeight: 600 }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke={FB.textSec} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      {/* Header */}
+      <div style={{
+        background: "#FFFFFF", padding: "20px 28px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        borderBottom: `1px solid ${FB.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+      }}>
+        <div onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: FB.textSec, fontSize: 16, fontWeight: 600 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke={FB.textSec} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           Back
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
             <rect x="3" y="14" width="4" height="7" rx="1" stroke={FB.gold} strokeWidth="1.5" />
             <rect x="10" y="8" width="4" height="13" rx="1" stroke={FB.gold} strokeWidth="1.5" />
             <rect x="17" y="11" width="4" height="10" rx="1" stroke={FB.gold} strokeWidth="1.5" />
           </svg>
-          <span style={{ fontSize: 20, fontWeight: 800 }}>Leaderboard</span>
+          <span style={{ fontSize: 22, fontWeight: 800 }}>Leaderboard</span>
         </div>
         <div style={{
-          fontSize: 10, color: FB.navyLight, background: `rgba(30,58,95,0.15)`,
-          border: `1px solid rgba(74,139,194,0.3)`, borderRadius: 20,
-          padding: "4px 10px", fontWeight: 600, letterSpacing: 1, animation: "pulse4 2s infinite",
-        }}>LIVE</div>
+          fontSize: 12, color: "#54B329", background: "#DCFCE7",
+          border: `1.5px solid #54B32933`, borderRadius: 20,
+          padding: "5px 14px", fontWeight: 700, letterSpacing: 1, animation: "pulse4 2s infinite",
+          display: "flex", alignItems: "center", gap: 6,
+        }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#54B329" }} />
+          LIVE
+        </div>
       </div>
 
+      {/* Podium */}
       {games.length >= 3 && (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 12, padding: "32px 24px 20px" }}>
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 16, padding: "40px 28px 24px" }}>
           {[1, 0, 2].map(idx => {
             const g = games[idx];
             if (!g) return null;
             const actualRank = idx === 1 ? 1 : idx === 0 ? 2 : 3;
             const isFirst = actualRank === 1;
-            const height = isFirst ? 120 : actualRank === 2 ? 96 : 80;
+            const height = isFirst ? 130 : actualRank === 2 ? 100 : 85;
             const medal = medalColors[actualRank];
             return (
-              <div key={g.team} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: isFirst ? 140 : 110, animation: `lbRowFade 0.5s ${actualRank * 0.15}s ease-out both` }}>
-                <div style={{ fontSize: 28, marginBottom: 4 }}>{medalEmojis[actualRank]}</div>
-                <div style={{ fontSize: isFirst ? 14 : 12, fontWeight: 800, color: FB.text, textAlign: "center", marginBottom: 2, lineHeight: 1.2 }}>{g.team}</div>
-                <div style={{ fontSize: 10, color: FB.textTer, marginBottom: 8 }}>{g.office}</div>
+              <div key={g.team} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: isFirst ? 160 : 120, animation: `lbRowFade 0.5s ${actualRank * 0.15}s ease-out both` }}>
+                <div style={{ fontSize: 36, marginBottom: 6 }}>{medalEmojis[actualRank]}</div>
+                <div style={{ fontSize: isFirst ? 16 : 14, fontWeight: 800, color: FB.text, textAlign: "center", marginBottom: 4, lineHeight: 1.2 }}>{g.team}</div>
+                <div style={{ fontSize: 12, color: FB.textTer, marginBottom: 10 }}>{g.office}</div>
                 <div style={{
-                  width: "100%", height, borderRadius: "12px 12px 0 0",
-                  background: `linear-gradient(180deg, ${medal}33, ${medal}11)`, border: `1px solid ${medal}44`, borderBottom: "none",
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4,
+                  width: "100%", height, borderRadius: "16px 16px 0 0",
+                  background: `linear-gradient(180deg, ${medal}33, ${medal}11)`, border: `2px solid ${medal}44`, borderBottom: "none",
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
                 }}>
-                  <div style={{ fontSize: isFirst ? 22 : 18, fontWeight: 900, color: FB.gold }}>€{g.commission.toLocaleString()}</div>
-                  <div style={{ fontSize: 11, color: FB.textSec }}>{g.matches} matches</div>
-                  <div style={{ fontSize: 9, color: FB.textDim }}>{g.gamesPlayed} games</div>
+                  <div style={{ fontSize: isFirst ? 24 : 20, fontWeight: 900, color: FB.gold }}>€{g.commission.toLocaleString()}</div>
+                  <div style={{ fontSize: 13, color: FB.textSec, fontWeight: 600 }}>{g.matches} matches</div>
+                  <div style={{ fontSize: 11, color: FB.textTer }}>{g.gamesPlayed} games</div>
                 </div>
               </div>
             );
@@ -806,32 +1005,35 @@ function LeaderboardPage({ onBack }) {
         </div>
       )}
 
-      <div style={{ padding: "0 24px 40px", maxWidth: 600, margin: "0 auto" }}>
+      {/* Rest of list */}
+      <div style={{ padding: "0 28px 40px", maxWidth: 640, margin: "0 auto" }}>
         {loading ? (
-          <div style={{ textAlign: "center", color: FB.textDim, padding: 60 }}>
-            <div style={{ width: 32, height: 32, borderRadius: "50%", border: `3px solid ${FB.border}`, borderTopColor: FB.navyLight, animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />Loading...
+          <div style={{ textAlign: "center", color: FB.textTer, padding: 60 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${FB.border}`, borderTopColor: FB.primary, animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
+            <span style={{ fontSize: 16 }}>Loading...</span>
           </div>
         ) : games.length === 0 ? (
-          <div style={{ textAlign: "center", color: FB.textDim, padding: 60 }}>No games played yet. Be the first!</div>
+          <div style={{ textAlign: "center", color: FB.textTer, padding: 60, fontSize: 18 }}>No games played yet. Be the first!</div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: games.length >= 3 ? 0 : 20 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: games.length >= 3 ? 0 : 20 }}>
             {games.map((g, i) => {
               const rank = i + 1;
               if (rank <= 3 && games.length >= 3) return null;
               return (
                 <div key={`${g.team}-${i}`} style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
-                  background: "rgba(30,41,59,0.6)", border: `1px solid ${FB.border}`, borderRadius: 12, padding: "12px 16px",
+                  background: "#FFFFFF", border: `1.5px solid ${FB.border}`, borderRadius: 16, padding: "16px 20px",
                   animation: `lbRowFade 0.4s ${0.1 + i * 0.05}s ease-out both`,
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 10, background: FB.card, border: `1.5px solid ${FB.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 900, color: FB.textTer }}>{rank}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 12, background: FB.bgSec, border: `1.5px solid ${FB.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: FB.textSec }}>{rank}</div>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: FB.text }}>{g.team}</div>
-                      <div style={{ fontSize: 10, color: FB.textDim }}>{g.office} · {g.gamesPlayed} games · {g.matches} matches</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: FB.text }}>{g.team}</div>
+                      <div style={{ fontSize: 12, color: FB.textTer }}>{g.office} · {g.gamesPlayed} games · {g.matches} matches</div>
                     </div>
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: FB.gold }}>€{g.commission.toLocaleString()}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: FB.gold }}>€{g.commission.toLocaleString()}</div>
                 </div>
               );
             })}
@@ -859,6 +1061,8 @@ export default function DealRushForm() {
   const [listings, setListings] = useState([]);
   const [buyers, setBuyers] = useState([]);
   const [matchedDeals, setMatchedDeals] = useState([]);
+  const [takenRole, setTakenRole] = useState(null);
+  const [takenByName, setTakenByName] = useState("");
   const [leaderboardData, setLeaderboardData] = useState([]);
 
   const channelRef = useRef(null);
@@ -869,6 +1073,29 @@ export default function DealRushForm() {
   const buyersRef = useRef([]);
   useEffect(() => { listingsRef.current = listings; }, [listings]);
   useEffect(() => { buyersRef.current = buyers; }, [buyers]);
+
+  // Listen for taken roles while on lobby
+  const lobbyChannelRef = useRef(null);
+  useEffect(() => {
+    if (gameState !== "lobby") {
+      if (lobbyChannelRef.current) { supabase.removeChannel(lobbyChannelRef.current); lobbyChannelRef.current = null; }
+      return;
+    }
+    setTakenRole(null);
+    setTakenByName("");
+    const ch = supabase.channel(CHANNEL_NAME + "-lobby", { config: { broadcast: { self: false } } });
+    ch.on("broadcast", { event: "role_taken" }, ({ payload }) => {
+      setTakenRole(payload.role);
+      setTakenByName(payload.name);
+    })
+    .on("broadcast", { event: "role_released" }, () => {
+      setTakenRole(null);
+      setTakenByName("");
+    })
+    .subscribe();
+    lobbyChannelRef.current = ch;
+    return () => { supabase.removeChannel(ch); lobbyChannelRef.current = null; };
+  }, [gameState]);
 
   // Hash routing
   useEffect(() => {
@@ -941,6 +1168,10 @@ export default function DealRushForm() {
     setPlayer(playerInfo);
     setRole(selectedRole);
     setGameState("waiting");
+    // Broadcast role taken to lobby listeners
+    if (lobbyChannelRef.current) {
+      lobbyChannelRef.current.send({ type: "broadcast", event: "role_taken", payload: { role: selectedRole, name } });
+    }
     const channel = supabase.channel(CHANNEL_NAME, { config: { broadcast: { self: false } } });
     channel
       .on("broadcast", { event: "player_joined" }, ({ payload }) => { setPartner(payload.player); setGameState("countdown"); channel.send({ type: "broadcast", event: "player_ready", payload: { player: playerInfo, role: selectedRole } }); })
@@ -1004,6 +1235,14 @@ export default function DealRushForm() {
   }, []);
 
   const handleReplay = useCallback(() => {
+    // Broadcast role released
+    const lobbyReleaseCh = supabase.channel(CHANNEL_NAME + "-lobby", { config: { broadcast: { self: false } } });
+    lobbyReleaseCh.subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        lobbyReleaseCh.send({ type: "broadcast", event: "role_released", payload: {} });
+        setTimeout(() => supabase.removeChannel(lobbyReleaseCh), 500);
+      }
+    });
     if (channelRef.current) { supabase.removeChannel(channelRef.current); channelRef.current = null; }
     setGameState("lobby"); setRole(null); setPlayer(null); setPartner(null);
     setTimeLeft(GAME_DURATION); setMatchCount(0); setTotalCommission(0);
@@ -1035,15 +1274,16 @@ export default function DealRushForm() {
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes chipBounce{0%{transform:scale(1)}30%{transform:scale(1.12)}60%{transform:scale(0.95)}100%{transform:scale(1)}}
         @keyframes slideFromLeft{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
-        @keyframes cardMatchIn{0%{opacity:0;transform:scale(0.5);box-shadow:0 0 0 transparent}50%{opacity:1;transform:scale(1.15);box-shadow:0 0 20px rgba(74,139,194,0.5)}100%{transform:scale(1);box-shadow:0 0 8px rgba(74,139,194,0.2)}}
+        @keyframes cardMatchIn{0%{opacity:0;transform:scale(0.5);box-shadow:0 0 0 transparent}50%{opacity:1;transform:scale(1.15);box-shadow:0 0 20px rgba(28,70,245,0.5)}100%{transform:scale(1);box-shadow:0 0 8px rgba(28,70,245,0.2)}}
         @keyframes dealReveal{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
         @keyframes lbRowFade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes lbPlayerSlide{0%{opacity:0;transform:translateY(60px) scale(0.9)}40%{opacity:1;transform:translateY(-8px) scale(1.04)}70%{transform:translateY(3px) scale(0.99)}100%{transform:translateY(0) scale(1)}}
         @keyframes lbShine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-        @keyframes countDramatic{0%{transform:scale(0);opacity:0;text-shadow:0 0 0 transparent}40%{transform:scale(1.4);opacity:1;text-shadow:0 0 60px rgba(74,139,194,0.8)}70%{transform:scale(0.9);text-shadow:0 0 30px rgba(74,139,194,0.4)}100%{transform:scale(1);text-shadow:0 0 20px rgba(74,139,194,0.2)}}
+        @keyframes countDramatic{0%{transform:scale(0);opacity:0;text-shadow:0 0 0 transparent}40%{transform:scale(1.4);opacity:1;text-shadow:0 0 60px rgba(28,70,245,0.8)}70%{transform:scale(0.9);text-shadow:0 0 30px rgba(28,70,245,0.4)}100%{transform:scale(1);text-shadow:0 0 20px rgba(28,70,245,0.2)}}
         @keyframes screenShake{0%,100%{transform:translateX(0)}10%{transform:translateX(-4px)}20%{transform:translateX(4px)}30%{transform:translateX(-3px)}40%{transform:translateX(3px)}50%{transform:translateX(-2px)}60%{transform:translateX(2px)}}
         @keyframes timerPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
         @keyframes timerShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+        @keyframes dotPulse{0%,100%{opacity:0.3;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}
         @keyframes numberPop{from{transform:scale(1.1)}to{transform:scale(1)}}
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:3px}
@@ -1051,21 +1291,53 @@ export default function DealRushForm() {
         input::placeholder{color:${FB.textDim}}
       `}</style>
 
-      {gameState === "lobby" && <LobbyScreen onJoin={handleJoin} onSettings={() => setGameState("settings")} onLeaderboard={() => setGameState("leaderboard")} />}
+      {gameState === "lobby" && <LobbyScreen onJoin={handleJoin} onSettings={() => setGameState("settings")} onLeaderboard={() => setGameState("leaderboard")} takenRole={takenRole} takenByName={takenByName} />}
       {gameState === "settings" && <SettingsPage onBack={() => setGameState("lobby")} />}
       {gameState === "leaderboard" && <LeaderboardPage onBack={() => setGameState("lobby")} />}
-      {gameState === "waiting" && <WaitingScreen player={player} role={role} />}
+      {gameState === "waiting" && <WaitingScreen player={player} role={role} onExit={handleReplay} />}
 
       {gameState === "countdown" && (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: FB.bg }}>
-          <div style={{ fontSize: 13, color: FB.textSec, letterSpacing: 3, marginBottom: 16, textTransform: "uppercase" }}>Game starts in</div>
+          {/* Player cards */}
+          <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 48 }}>
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+              padding: "16px 28px", borderRadius: 18, background: "#FFFFFF",
+              border: `2px solid ${FB.primary}22`, boxShadow: "0 4px 16px rgba(28,70,245,0.08)",
+            }}>
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: "#EEF1FE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={FB.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: FB.text }}>{role === "listing" ? player?.name : partner?.name}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: FB.primary, letterSpacing: 1, textTransform: "uppercase" }}>Listing</div>
+            </div>
+
+            <div style={{ fontSize: 24, fontWeight: 900, color: FB.textTer }}>VS</div>
+
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+              padding: "16px 28px", borderRadius: 18, background: "#FFFFFF",
+              border: `2px solid #54B32922`, boxShadow: "0 4px 16px rgba(84,179,41,0.08)",
+            }}>
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: "#DCFCE7", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#54B329" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: FB.text }}>{role === "buyer" ? player?.name : partner?.name}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#54B329", letterSpacing: 1, textTransform: "uppercase" }}>Buyer</div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 18, color: FB.textTer, letterSpacing: 5, marginBottom: 20, textTransform: "uppercase", fontWeight: 700 }}>Game starts in</div>
           <div key={countdown} style={{
-            fontSize: 120, fontWeight: 900, fontFamily: "system-ui",
-            background: `linear-gradient(135deg,${FB.navyLight},${FB.coral})`,
+            fontSize: 160, fontWeight: 900, fontFamily: "system-ui", lineHeight: 1,
+            background: `linear-gradient(135deg,${FB.primary},${FB.primary400})`,
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
             animation: "countDramatic 0.8s ease-out",
           }}>{countdown}</div>
-          <div style={{ fontSize: 14, color: FB.textTer, marginTop: 12 }}>{player?.name} & {partner?.name}</div>
         </div>
       )}
 

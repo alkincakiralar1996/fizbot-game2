@@ -2,3 +2,4 @@ node_modules
 dist
 SUPABASE_CREDENTIALS.md
 .env
+.DS_Store
