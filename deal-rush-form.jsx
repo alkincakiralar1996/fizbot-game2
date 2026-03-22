@@ -1200,10 +1200,30 @@ export default function DealRushForm() {
       setTakenRole(null);
       setTakenByName("");
     })
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        // Ask if anyone is already in the room
+        ch.send({ type: "broadcast", event: "who_is_here", payload: {} });
+      }
+    });
     lobbyChannelRef.current = ch;
     return () => { supabase.removeChannel(ch); lobbyChannelRef.current = null; };
   }, [gameState]);
+
+  // While waiting, respond to who_is_here queries from new lobby visitors
+  const waitResponderRef = useRef(null);
+  useEffect(() => {
+    if (gameState === "waiting" && role && player) {
+      const ch = supabase.channel(CHANNEL_NAME + "-lobby", { config: { broadcast: { self: false } } });
+      ch.on("broadcast", { event: "who_is_here" }, () => {
+        ch.send({ type: "broadcast", event: "role_taken", payload: { role, name: player.name } });
+      }).subscribe();
+      waitResponderRef.current = ch;
+    } else {
+      if (waitResponderRef.current) { supabase.removeChannel(waitResponderRef.current); waitResponderRef.current = null; }
+    }
+    return () => { if (waitResponderRef.current) { supabase.removeChannel(waitResponderRef.current); waitResponderRef.current = null; } };
+  }, [gameState, role, player]);
 
   // Hash routing
   useEffect(() => {
@@ -1280,10 +1300,6 @@ export default function DealRushForm() {
     setPlayer(playerInfo);
     setRole(selectedRole);
     setGameState("waiting");
-    // Broadcast role taken to lobby listeners
-    if (lobbyChannelRef.current) {
-      lobbyChannelRef.current.send({ type: "broadcast", event: "role_taken", payload: { role: selectedRole, name } });
-    }
     const channel = supabase.channel(CHANNEL_NAME, { config: { broadcast: { self: false } } });
     channel
       .on("broadcast", { event: "player_joined" }, ({ payload }) => { setPartner(payload.player); setGameState("countdown"); channel.send({ type: "broadcast", event: "player_ready", payload: { player: playerInfo, role: selectedRole } }); })
