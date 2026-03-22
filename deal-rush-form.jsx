@@ -1363,14 +1363,10 @@ export default function DealRushForm() {
   }, []);
 
   const handleReplay = useCallback(() => {
-    // Broadcast role released
-    const lobbyReleaseCh = supabase.channel(CHANNEL_NAME + "-lobby", { config: { broadcast: { self: false } } });
-    lobbyReleaseCh.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        lobbyReleaseCh.send({ type: "broadcast", event: "role_released", payload: {} });
-        setTimeout(() => supabase.removeChannel(lobbyReleaseCh), 500);
-      }
-    });
+    // Broadcast role released via responder channel (already subscribed to lobby)
+    if (waitResponderRef.current) {
+      waitResponderRef.current.send({ type: "broadcast", event: "role_released", payload: {} });
+    }
     if (channelRef.current) { supabase.removeChannel(channelRef.current); channelRef.current = null; }
     setGameState("lobby"); setRole(null); setPlayer(null); setPartner(null);
     setTimeLeft(gameDuration); setMatchCount(0); setTotalCommission(0);
