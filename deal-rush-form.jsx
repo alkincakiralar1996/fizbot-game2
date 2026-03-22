@@ -29,16 +29,16 @@ const FB = {
 };
 
 const SIZES = ["T1", "T2", "T3"];
-const LISTING_PRICES = ["€300k", "€500k", "€800k"];
+const LISTING_PRICES = ["€300k", "€500k", "€700k"];
 const BUYER_PRICES = ["€200-400k", "€400-600k", "€600-800k"];
 const LOCATIONS = [
   { name: "Lisbon", img: "https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=200&h=120&fit=crop" },
   { name: "Porto", img: "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=200&h=120&fit=crop" },
   { name: "Algarve", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&h=120&fit=crop" },
 ];
-const PRICE_MATCH_MAP = { "€300k": "€200-400k", "€500k": "€400-600k", "€800k": "€600-800k" };
-const PRICE_TO_VALUE = { "€300k": 300000, "€500k": 500000, "€800k": 800000 };
-const DEFAULT_gameDuration = 300;
+const PRICE_MATCH_MAP = { "€300k": "€200-400k", "€500k": "€400-600k", "€700k": "€600-800k" };
+const PRICE_TO_VALUE = { "€300k": 300000, "€500k": 500000, "€700k": 700000 };
+const DEFAULT_GAME_DURATION = 300;
 const CHANNEL_NAME = "match-it-game";
 
 // ─── Sound Utility ───
@@ -89,27 +89,37 @@ function MatchOverlay({ show }) {
   );
 }
 
-// ─── Mini Card ───
+// ─── Mini Card (grid style) ───
 function MiniCard({ item, isMatched, isNew, side }) {
-  const borderColor = isMatched ? FB.primary400 : (side === "listing" ? "#60A5FA" : "#F472B6");
-  const bgColor = isMatched ? `rgba(28,70,245,0.2)` : "rgba(241,245,249,0.9)";
-  const anim = isNew && isMatched ? "cardMatchIn 0.6s ease-out" : "slideFromLeft 0.3s ease-out";
+  const accent = side === "listing" ? FB.primary : "#54B329";
+  const locImg = LOCATIONS.find(l => l.name === item.location)?.img;
   return (
     <div style={{
-      display: "flex", alignItems: "center", gap: 6,
-      background: bgColor, border: `1.5px solid ${borderColor}`,
-      borderRadius: 8, padding: "5px 8px", fontSize: 10, color: FB.textSec,
-      animation: anim, flexShrink: 0,
-      boxShadow: isMatched && isNew ? `0 0 12px rgba(28,70,245,0.5)` : "none",
+      background: isMatched ? `${accent}08` : "#FFFFFF",
+      border: `2px solid ${isMatched ? accent : FB.border}`,
+      borderRadius: 16, overflow: "hidden",
+      animation: isNew && isMatched ? "cardMatchIn 0.6s ease-out" : "slideFromLeft 0.3s ease-out",
+      boxShadow: isMatched ? `0 4px 16px ${accent}20` : "0 2px 6px rgba(0,0,0,0.04)",
+      position: "relative",
     }}>
-      {isMatched && <span style={{ color: FB.primary400, fontWeight: 800, fontSize: 11 }}>✓</span>}
-      <span style={{ fontWeight: 600, color: isMatched ? FB.primary400 : borderColor }}>{item.propertyType === "Apartment" ? "Apt" : "Villa"}</span>
-      <span style={{ color: FB.textTer }}>·</span>
-      <span>{item.size}</span>
-      <span style={{ color: FB.textTer }}>·</span>
-      <span>{item.priceRange}</span>
-      <span style={{ color: FB.textTer }}>·</span>
-      <span>{item.location}</span>
+      {locImg && <img src={locImg} alt={item.location} style={{ width: "100%", height: 70, objectFit: "cover", display: "block" }} />}
+      {isMatched && (
+        <div style={{
+          position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: 8,
+          background: accent, display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: `0 2px 8px ${accent}40`,
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+      )}
+      <div style={{ padding: "10px 12px" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: FB.text }}>{item.propertyType} · {item.size}</div>
+        <div style={{ fontSize: 13, color: isMatched ? accent : FB.textSec, fontWeight: 600, marginTop: 2 }}>
+          {item.priceRange} · {item.location}
+        </div>
+      </div>
     </div>
   );
 }
@@ -162,72 +172,63 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center",
-      background: "rgba(0,0,0,0.5)", backdropFilter: "blur(10px)", animation: "fadeIn 0.5s", overflow: "auto",
+      background: "rgba(255,255,255,0.92)", backdropFilter: "blur(20px)", animation: "fadeIn 0.5s", overflow: "auto",
     }}>
-      {particles.map(p => (
-        <div key={p.k} style={{
-          position: "absolute", left: p.x, top: p.y,
-          width: p.t === "burst" ? 6 : Math.random() * 8 + 3, height: p.t === "burst" ? 6 : Math.random() * 8 + 3,
-          borderRadius: p.t === "burst" ? "50%" : (Math.random() > 0.5 ? "50%" : "2px"), background: p.c,
-          boxShadow: p.t === "burst" ? `0 0 6px ${p.c}` : "none",
-          animation: `${p.t === "burst" ? "fwPop" : "confDrop"} ${p.t === "burst" ? "1.2s" : `${2 + Math.random() * 2}s`} ${p.d}s ease-out forwards`,
-          transform: p.t === "conf" ? `rotate(${Math.random() * 360}deg)` : undefined,
-        }} />
-      ))}
-
-      <div style={{ zIndex: 10, maxWidth: 520, width: "100%", padding: "24px 20px", animation: "scoreIn 0.8s 0.3s ease-out both" }}>
+      <div style={{ zIndex: 10, maxWidth: 600, width: "100%", padding: "32px 28px", animation: "scoreIn 0.8s 0.3s ease-out both" }}>
         {/* ─── SUMMARY ─── */}
         {phase === "summary" && (
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 14, letterSpacing: 5, color: FB.textSec, fontFamily: "system-ui", marginBottom: 8, textTransform: "uppercase", fontWeight: 600 }}>
+            <div style={{ fontSize: 18, letterSpacing: 5, color: FB.textSec, marginBottom: 12, textTransform: "uppercase", fontWeight: 700 }}>
               Time's up!
             </div>
             <div style={{
-              fontSize: 72, fontWeight: 900, fontFamily: "system-ui",
-              background: `linear-gradient(135deg,${FB.primary400},${FB.coral})`,
+              fontSize: 100, fontWeight: 900, fontFamily: "system-ui",
+              background: `linear-gradient(135deg,${FB.primary},${FB.primary400})`,
               WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", lineHeight: 1,
-              filter: `drop-shadow(0 4px 20px rgba(28,70,245,0.5))`,
-              animation: "numberPop 0.3s ease-out",
             }}>{displayMatches}</div>
-            <div style={{ fontSize: 16, color: FB.primary400, fontFamily: "system-ui", fontWeight: 700, marginTop: 4, letterSpacing: 3, textTransform: "uppercase" }}>
-              Deals matched
+            <div style={{ fontSize: 20, color: FB.primary, fontWeight: 800, marginTop: 8, letterSpacing: 4, textTransform: "uppercase" }}>
+              Deals Matched
             </div>
+
             <div style={{
-              marginTop: 20, padding: "14px 20px", background: "rgba(251,191,36,0.08)",
-              border: "1px solid rgba(251,191,36,0.25)", borderRadius: 12, display: "inline-block",
+              marginTop: 28, padding: "20px 28px", background: "#FFFFFF",
+              border: `2px solid ${FB.border}`, borderRadius: 20, display: "inline-block",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
             }}>
-              <div style={{ fontSize: 11, color: FB.textSec, letterSpacing: 2, textTransform: "uppercase", marginBottom: 4 }}>Total commission earned</div>
-              <div style={{ fontSize: 32, fontWeight: 900, color: FB.gold, fontFamily: "system-ui", animation: "numberPop 0.3s ease-out" }}>€{displayCommission.toLocaleString()}</div>
-              <div style={{ fontSize: 11, color: FB.textTer, marginTop: 2 }}>2.5% per agent per deal</div>
+              <div style={{ fontSize: 13, color: FB.textSec, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6, fontWeight: 700 }}>Total Commission Earned</div>
+              <div style={{ fontSize: 42, fontWeight: 900, color: FB.gold }}>€{displayCommission.toLocaleString()}</div>
+              <div style={{ fontSize: 13, color: FB.textTer, marginTop: 4 }}>2.5% per agent per deal</div>
             </div>
+
             {matchedDeals.length > 0 && (
-              <div style={{ marginTop: 20, textAlign: "left" }}>
-                <div style={{ fontSize: 11, letterSpacing: 2, color: FB.textTer, textTransform: "uppercase", fontWeight: 600, marginBottom: 8, textAlign: "center" }}>Closed deals</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ marginTop: 28, textAlign: "left" }}>
+                <div style={{ fontSize: 14, letterSpacing: 2, color: FB.textSec, textTransform: "uppercase", fontWeight: 700, marginBottom: 12, textAlign: "center" }}>Closed Deals</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {matchedDeals.map((deal, i) => {
                     const price = PRICE_TO_VALUE[deal.listing.priceRange] || 0;
                     const dealCommission = price * 0.025;
                     return (
                       <div key={deal.id} style={{
                         display: "flex", alignItems: "center", justifyContent: "space-between",
-                        background: `rgba(28,70,245,0.1)`, border: `1px solid rgba(28,70,245,0.3)`,
-                        borderRadius: 10, padding: "10px 14px",
+                        background: "#FFFFFF", border: `1.5px solid ${FB.border}`,
+                        borderRadius: 16, padding: "14px 20px",
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
                         animation: `dealReveal 0.5s ${0.3 + i * 0.15}s ease-out both`,
                       }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                           <div style={{
-                            width: 28, height: 28, borderRadius: 8, background: `rgba(28,70,245,0.2)`,
+                            width: 36, height: 36, borderRadius: 10, background: FB.primary,
                             display: "flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 13, fontWeight: 800, color: FB.primary400,
+                            fontSize: 15, fontWeight: 800, color: "#FFFFFF",
                           }}>#{i + 1}</div>
                           <div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: FB.text }}>{deal.listing.propertyType} · {deal.listing.size} · {deal.listing.location}</div>
-                            <div style={{ fontSize: 10, color: FB.textTer, marginTop: 1 }}>Listed {deal.listing.priceRange} → Buyer {deal.buyer.priceRange}</div>
+                            <div style={{ fontSize: 16, fontWeight: 700, color: FB.text }}>{deal.listing.propertyType} · {deal.listing.size} · {deal.listing.location}</div>
+                            <div style={{ fontSize: 13, color: FB.textSec, marginTop: 2 }}>Listed {deal.listing.priceRange} → Buyer {deal.buyer.priceRange}</div>
                           </div>
                         </div>
                         <div style={{ textAlign: "right" }}>
-                          <div style={{ fontSize: 14, fontWeight: 800, color: FB.gold }}>€{dealCommission.toLocaleString()}</div>
-                          <div style={{ fontSize: 9, color: FB.textTer }}>per agent</div>
+                          <div style={{ fontSize: 18, fontWeight: 800, color: FB.gold }}>€{dealCommission.toLocaleString()}</div>
+                          <div style={{ fontSize: 11, color: FB.textTer }}>per agent</div>
                         </div>
                       </div>
                     );
@@ -235,65 +236,64 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
                 </div>
               </div>
             )}
+
             <button onClick={() => setPhase("leaderboard")} style={{
-              marginTop: 24, padding: "12px 40px", fontSize: 14, fontWeight: 700, fontFamily: "system-ui",
-              color: "#FFFFFF", background: `linear-gradient(135deg,${FB.primary},${FB.primary400})`, border: "none",
-              borderRadius: 12, cursor: "pointer", textTransform: "uppercase", letterSpacing: 2,
-              boxShadow: `0 4px 20px rgba(28,70,245,0.5)`, transition: "transform 0.15s",
+              marginTop: 32, padding: "16px 48px", fontSize: 16, fontWeight: 800, fontFamily: "system-ui",
+              color: "#FFFFFF", background: FB.primary, border: "none",
+              borderRadius: 16, cursor: "pointer", textTransform: "uppercase", letterSpacing: 3,
+              boxShadow: `0 4px 20px rgba(28,70,245,0.3)`, transition: "transform 0.15s",
             }}
-              onMouseOver={e => e.currentTarget.style.transform = "scale(1.05)"}
+              onMouseOver={e => e.currentTarget.style.transform = "scale(1.03)"}
               onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
-            >View leaderboard</button>
+            >View Leaderboard</button>
           </div>
         )}
 
         {/* ─── LEADERBOARD ─── */}
         {phase === "leaderboard" && (
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 14, letterSpacing: 4, color: FB.textSec, fontFamily: "system-ui", marginBottom: 6, textTransform: "uppercase", fontWeight: 600 }}>Leaderboard</div>
-            <div style={{ fontSize: 11, color: FB.textTer, marginBottom: 20 }}>Top teams</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {leaderboard.map((entry, i) => {
+            <div style={{ fontSize: 18, letterSpacing: 5, color: FB.textSec, marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>Leaderboard</div>
+            <div style={{ fontSize: 14, color: FB.textTer, marginBottom: 24 }}>Top teams</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 400, overflowY: "auto" }}>
+              {leaderboard.slice(0, 10).map((entry, i) => {
                 const isPlayer = entry.isPlayer;
                 const medalColors = { 1: FB.gold, 2: "#94A3B8", 3: "#CD7F32" };
                 const medal = medalColors[entry.rank];
                 return (
                   <div key={`${entry.team}-${i}`} style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between",
-                    background: isPlayer ? `rgba(28,70,245,0.15)` : "rgba(241,245,249,0.9)",
-                    border: `1.5px solid ${isPlayer ? `rgba(28,70,245,0.5)` : FB.border}`,
-                    borderRadius: 12, padding: "12px 16px",
+                    background: isPlayer ? `${FB.primary}10` : "#FFFFFF",
+                    border: `2px solid ${isPlayer ? FB.primary : FB.border}`,
+                    borderRadius: 16, padding: "16px 20px",
                     animation: isPlayer ? `lbPlayerSlide 0.8s ${0.3 + i * 0.12}s ease-out both` : `lbRowFade 0.4s ${0.1 + i * 0.1}s ease-out both`,
-                    boxShadow: isPlayer ? `0 0 20px rgba(28,70,245,0.3)` : "none",
-                    position: "relative", overflow: "hidden",
+                    boxShadow: isPlayer ? `0 4px 16px rgba(28,70,245,0.15)` : "0 1px 4px rgba(0,0,0,0.04)",
                   }}>
-                    {isPlayer && <div style={{ position: "absolute", inset: 0, background: `linear-gradient(90deg,transparent,rgba(28,70,245,0.08),transparent)`, animation: "lbShine 2s 1.5s ease-in-out" }} />}
-                    <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, zIndex: 1 }}>
                       <div style={{
-                        width: 32, height: 32, borderRadius: 10,
-                        background: medal ? `${medal}22` : FB.card, border: `1.5px solid ${medal || FB.border}`,
+                        width: 38, height: 38, borderRadius: 12,
+                        background: medal ? `${medal}22` : "#FFFFFF", border: `2px solid ${medal || FB.border}`,
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 14, fontWeight: 900, color: medal || FB.textTer,
+                        fontSize: 16, fontWeight: 900, color: medal || FB.textTer,
                       }}>{entry.rank}</div>
                       <div style={{ textAlign: "left" }}>
-                        <div style={{ fontSize: 14, fontWeight: isPlayer ? 800 : 600, color: isPlayer ? FB.primary400 : FB.text }}>
+                        <div style={{ fontSize: 17, fontWeight: isPlayer ? 800 : 600, color: isPlayer ? FB.primary : FB.text }}>
                           {entry.team} {isPlayer && "⬅"}
                         </div>
-                        <div style={{ fontSize: 10, color: FB.textTer }}>{entry.matches} matches</div>
+                        <div style={{ fontSize: 13, color: FB.textTer }}>{entry.matches} matches</div>
                       </div>
                     </div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: FB.gold, zIndex: 1 }}>€{entry.commission.toLocaleString()}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: FB.gold, zIndex: 1 }}>€{entry.commission.toLocaleString()}</div>
                   </div>
                 );
               })}
             </div>
             <button onClick={() => setPhase("fizbot")} style={{
-              marginTop: 28, padding: "14px 48px", fontSize: 15, fontWeight: 700, fontFamily: "system-ui",
-              color: "#FFFFFF", background: `linear-gradient(135deg,${FB.primary},${FB.primary400})`, border: "none",
-              borderRadius: 12, cursor: "pointer", textTransform: "uppercase", letterSpacing: 2,
-              boxShadow: `0 4px 20px rgba(28,70,245,0.5)`, transition: "transform 0.15s",
+              marginTop: 32, padding: "16px 56px", fontSize: 16, fontWeight: 800, fontFamily: "system-ui",
+              color: "#FFFFFF", background: FB.primary, border: "none",
+              borderRadius: 16, cursor: "pointer", textTransform: "uppercase", letterSpacing: 3,
+              boxShadow: `0 4px 20px rgba(28,70,245,0.3)`, transition: "transform 0.15s",
             }}
-              onMouseOver={e => e.currentTarget.style.transform = "scale(1.05)"}
+              onMouseOver={e => e.currentTarget.style.transform = "scale(1.03)"}
               onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
             >Continue</button>
           </div>
@@ -303,57 +303,56 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
         {phase === "fizbot" && (
           <div style={{ textAlign: "center", animation: "fadeIn 0.8s ease-out" }}>
             <img src="/fizbot-icon.png" alt="Fizbot" style={{
-              width: 80, height: 80, borderRadius: 20, margin: "0 auto 28px",
-              boxShadow: "0 4px 24px rgba(28,70,245,0.3)",
+              width: 100, height: 100, borderRadius: 24, margin: "0 auto 32px",
+              boxShadow: "0 8px 32px rgba(28,70,245,0.2)",
               animation: "pulse4 3s infinite",
             }} />
 
             <div style={{
-              fontSize: 16, letterSpacing: 6, color: FB.textSec, fontWeight: 700,
-              textTransform: "uppercase", marginBottom: 20,
+              fontSize: 20, letterSpacing: 8, color: FB.textSec, fontWeight: 800,
+              textTransform: "uppercase", marginBottom: 24,
               animation: "fadeIn 0.5s 0.2s ease-out both",
             }}>fizbot</div>
 
             <div style={{
-              fontSize: 26, fontWeight: 800, color: FB.textSec, marginBottom: 8,
+              fontSize: 32, fontWeight: 800, color: FB.text, marginBottom: 10,
               animation: "fadeIn 0.5s 0.4s ease-out both",
             }}>
               Stop <span style={{ textDecoration: "line-through", color: FB.textTer }}>Search & Scroll</span>
             </div>
 
             <div style={{
-              fontSize: 30, fontWeight: 900, marginBottom: 40,
+              fontSize: 36, fontWeight: 900, color: FB.text, marginBottom: 48,
               animation: "fadeIn 0.5s 0.6s ease-out both",
             }}>
-              It's Time to <span style={{ color: FB.primary400 }}>Match</span> &{" "}
+              It's Time to <span style={{ color: FB.primary }}>Match</span> &{" "}
               <span style={{ color: FB.coral }}>Close</span>
             </div>
 
             <a href="https://fizbot.net" target="_blank" rel="noopener noreferrer" style={{
-              display: "inline-block", padding: "18px 52px",
-              fontSize: 17, fontWeight: 800, color: "#FFFFFF",
-              background: `linear-gradient(135deg, ${FB.primary}, ${FB.primary400})`,
-              border: `2px solid ${FB.primary400}`, borderRadius: 16,
+              display: "inline-block", padding: "20px 60px",
+              fontSize: 19, fontWeight: 800, color: "#FFFFFF",
+              background: FB.primary, border: "none", borderRadius: 18,
               textDecoration: "none", letterSpacing: 3,
-              boxShadow: `0 4px 30px rgba(28,70,245,0.6)`,
+              boxShadow: `0 6px 24px rgba(28,70,245,0.3)`,
               animation: "pulse4 2.5s infinite, fadeIn 0.5s 0.8s ease-out both",
               transition: "transform 0.15s",
             }}
-              onMouseOver={e => e.currentTarget.style.transform = "scale(1.05)"}
+              onMouseOver={e => e.currentTarget.style.transform = "scale(1.03)"}
               onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
             >
               fizbot x — early access
             </a>
 
-            <div style={{ marginTop: 40, animation: "fadeIn 0.5s 1s ease-out both" }}>
+            <div style={{ marginTop: 48, animation: "fadeIn 0.5s 1s ease-out both" }}>
               <button onClick={onReplay} style={{
-                padding: "10px 32px", fontSize: 13, fontWeight: 600, fontFamily: "system-ui",
-                color: FB.textTer, background: "transparent", border: `1px solid ${FB.border}`,
-                borderRadius: 10, cursor: "pointer", letterSpacing: 1,
-                transition: "all 0.2s",
+                padding: "14px 40px", fontSize: 15, fontWeight: 700, fontFamily: "system-ui",
+                color: FB.textSec, background: "#FFFFFF", border: `1.5px solid ${FB.border}`,
+                borderRadius: 14, cursor: "pointer", letterSpacing: 1,
+                transition: "all 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
               }}
-                onMouseOver={e => { e.currentTarget.style.color = FB.text; e.currentTarget.style.borderColor = FB.textSec; }}
-                onMouseOut={e => { e.currentTarget.style.color = FB.textTer; e.currentTarget.style.borderColor = FB.border; }}
+                onMouseOver={e => { e.currentTarget.style.borderColor = FB.textSec; }}
+                onMouseOut={e => { e.currentTarget.style.borderColor = FB.border; }}
               >Play again</button>
             </div>
           </div>
@@ -366,184 +365,207 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
 // ─── Game Panel (full screen on each tablet) ───
 function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled, commission, pendingItems, matchedDeals, playerName, partnerName, onEndGame }) {
   const isListing = role === "listing";
-  const accent = isListing ? "#60A5FA" : "#F472B6";
-  const accentBg = isListing ? "rgba(96,165,250,0.15)" : "rgba(244,114,182,0.15)";
-  const accentBorder = isListing ? "rgba(96,165,250,0.5)" : "rgba(244,114,182,0.5)";
+  const accent = isListing ? FB.primary : "#54B329";
+  const accentBg = isListing ? "#EEF1FE" : "#DCFCE7";
+  const accentBorder = isListing ? FB.primary : "#54B329";
   const label = isListing ? "Listing Agent" : "Buyer Agent";
 
-  const Chip = ({ label: chipLabel, selected, onClick }) => (
-    <div key={selected ? "sel" : "un"} onClick={disabled ? undefined : onClick} style={{
-      flex: "1 1 22%", background: selected ? accentBg : "#FFFFFF",
-      border: `2px solid ${selected ? accentBorder : FB.border}`,
-      borderRadius: 14, padding: "14px 8px", textAlign: "center",
-      cursor: disabled ? "default" : "pointer", transition: "all 0.15s",
-      userSelect: "none", WebkitTapHighlightColor: "transparent",
-      animation: selected ? "chipBounce 0.3s ease-out" : "none",
-    }}>
-      <span style={{ fontSize: 16, fontWeight: selected ? 700 : 500, color: selected ? accent : FB.textSec }}>{chipLabel}</span>
-    </div>
-  );
-
-  const TypeChip = ({ label: chipLabel, icon, selected, onClick }) => (
-    <div onClick={disabled ? undefined : onClick} style={{
-      flex: "1 1 45%", background: selected ? accentBg : "#FFFFFF",
-      border: `2px solid ${selected ? accentBorder : FB.border}`,
-      borderRadius: 16, padding: "18px 12px", textAlign: "center",
-      cursor: disabled ? "default" : "pointer", transition: "all 0.15s",
-      userSelect: "none", WebkitTapHighlightColor: "transparent",
-      animation: selected ? "chipBounce 0.3s ease-out" : "none",
-    }}>
-      <div style={{ marginBottom: 8 }}>{icon}</div>
-      <span style={{ fontSize: 16, fontWeight: selected ? 700 : 500, color: selected ? accent : FB.textSec }}>{chipLabel}</span>
-    </div>
-  );
-
-  const houseIcon = (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-      <rect x="4" y="11" width="16" height="10" rx="1.5" stroke={selections.propertyType === "Apartment" ? accent : FB.textTer} strokeWidth="1.5" />
-      <path d="M4 11L12 5L20 11" stroke={selections.propertyType === "Apartment" ? accent : FB.textTer} strokeWidth="1.5" />
-      <rect x="9" y="15" width="6" height="6" rx="0.5" stroke={selections.propertyType === "Apartment" ? accent : FB.textTer} strokeWidth="1.5" />
-    </svg>
-  );
-  const villaIcon = (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-      <rect x="2" y="13" width="8" height="8" rx="1" stroke={selections.propertyType === "Villa" ? accent : FB.textTer} strokeWidth="1.5" />
-      <path d="M2 13L6 8.5L10 13" stroke={selections.propertyType === "Villa" ? accent : FB.textTer} strokeWidth="1.5" />
-      <rect x="12" y="9" width="10" height="12" rx="1" stroke={selections.propertyType === "Villa" ? accent : FB.textTer} strokeWidth="1.5" />
-      <path d="M12 9L17 4L22 9" stroke={selections.propertyType === "Villa" ? accent : FB.textTer} strokeWidth="1.5" />
-    </svg>
-  );
+  // Wizard step: show current question based on what's not yet selected
+  const rawStep = !selections.propertyType ? 1 : !selections.size ? 2 : !selections.priceRange ? 3 : !selections.location ? 4 : 0;
+  const [visibleStep, setVisibleStep] = useState(1);
+  useEffect(() => { if (rawStep >= 1) setVisibleStep(rawStep); }, [rawStep]);
+  const step = rawStep === 0 ? visibleStep : rawStep;
 
   const timerAnim = timeLeft <= 5 ? "timerShake 0.3s ease-in-out infinite" : timeLeft <= 10 ? "timerPulse 1s ease-in-out infinite" : "none";
 
-  const accentLight = isListing ? "#EEF1FE" : "#DCFCE7";
+  const houseIcon = (sel) => (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+      <rect x="4" y="11" width="16" height="10" rx="1.5" stroke={sel ? accent : FB.textTer} strokeWidth="1.5" />
+      <path d="M4 11L12 5L20 11" stroke={sel ? accent : FB.textTer} strokeWidth="1.5" />
+      <rect x="9" y="15" width="6" height="6" rx="0.5" stroke={sel ? accent : FB.textTer} strokeWidth="1.5" />
+    </svg>
+  );
+  const villaIcon = (sel) => (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+      <rect x="2" y="13" width="8" height="8" rx="1" stroke={sel ? accent : FB.textTer} strokeWidth="1.5" />
+      <path d="M2 13L6 8.5L10 13" stroke={sel ? accent : FB.textTer} strokeWidth="1.5" />
+      <rect x="12" y="9" width="10" height="12" rx="1" stroke={sel ? accent : FB.textTer} strokeWidth="1.5" />
+      <path d="M12 9L17 4L22 9" stroke={sel ? accent : FB.textTer} strokeWidth="1.5" />
+    </svg>
+  );
+
+  const OptionCard = ({ label: lbl, selected, onClick, icon, wide }) => (
+    <div onClick={disabled ? undefined : onClick} style={{
+      flex: wide ? "1 1 45%" : "1 1 28%", background: "#FFFFFF",
+      border: `2.5px solid ${FB.border}`,
+      borderRadius: 20, padding: "20px 16px", textAlign: "center",
+      cursor: disabled ? "default" : "pointer", transition: "all 0.15s",
+      userSelect: "none", WebkitTapHighlightColor: "transparent",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+      minHeight: 120, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    }}>
+      {icon && <div style={{ marginBottom: 14 }}>{icon}</div>}
+      <span style={{ fontSize: 20, fontWeight: 700, color: FB.text }}>{lbl}</span>
+    </div>
+  );
+
+  const sectionTitle = isListing ? "Create Listing" : "Create Buyer Demand";
+
+  const stepLabel = step === 1 ? (isListing ? "Property Type" : "What are they looking for?")
+    : step === 2 ? "Size" : step === 3 ? (isListing ? "Price Range" : "Budget Range")
+    : (isListing ? "Location" : "Preferred Area");
 
   return (
     <div style={{
-      display: "flex", flexDirection: "column",
-      background: FB.bg, padding: "0", overflow: "auto", minHeight: "100vh",
+      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+      background: FB.bg, overflow: "auto", minHeight: "100vh", padding: "24px 28px",
+      width: "100%",
     }}>
-      {/* Header bar */}
+    <div style={{ maxWidth: 680, width: "100%" }}>
+
+      {/* Players bar */}
       <div style={{
-        background: `linear-gradient(135deg, ${accent}, ${isListing ? FB.primary400 : "#6BCB47"})`,
-        padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center",
-        boxShadow: `0 4px 16px ${accent}30`,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 16,
+        marginBottom: 16,
       }}>
-        <div>
-          <div style={{ fontSize: 24, fontWeight: 900, color: "#FFFFFF" }}>{playerName}</div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 600, marginTop: 2 }}>{label} · Partner: {partnerName}</div>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "8px 16px", borderRadius: 12,
+          background: isListing ? "#EEF1FE" : "#FFFFFF",
+          border: `1.5px solid ${isListing ? FB.primary + "33" : FB.border}`,
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={FB.primary} strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <span style={{ fontSize: 15, fontWeight: 800, color: isListing ? FB.primary : FB.text }}>{isListing ? playerName : partnerName}</span>
         </div>
-        {!disabled && (
-          <div onClick={onEndGame} style={{
-            padding: "8px 16px", fontSize: 12, fontWeight: 700, color: "#FFFFFF",
-            background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)",
-            borderRadius: 10, cursor: "pointer", textTransform: "uppercase", letterSpacing: 1,
-            userSelect: "none", backdropFilter: "blur(4px)",
-          }}>End Game</div>
-        )}
+        <span style={{ fontSize: 14, fontWeight: 800, color: FB.textTer }}>vs</span>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "8px 16px", borderRadius: 12,
+          background: !isListing ? "#DCFCE7" : "#FFFFFF",
+          border: `1.5px solid ${!isListing ? "#54B32933" : FB.border}`,
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#54B329" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span style={{ fontSize: 15, fontWeight: 800, color: !isListing ? "#54B329" : FB.text }}>{!isListing ? playerName : partnerName}</span>
+        </div>
       </div>
 
-      {/* Stats bar */}
+      {/* Stats row */}
       <div style={{
-        display: "flex", justifyContent: "space-around", alignItems: "center",
-        background: "#FFFFFF", padding: "14px 20px",
-        borderBottom: `1px solid ${FB.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 0,
+        width: "100%", background: "#FFFFFF",
+        borderRadius: 20, border: `1.5px solid ${FB.border}`,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.04)", marginBottom: 24, overflow: "hidden",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "16px 0" }}>
           <div style={{
-            width: 10, height: 10, borderRadius: "50%", background: "#EF4444",
+            width: 12, height: 12, borderRadius: "50%", background: "#EF4444",
             boxShadow: "0 0 8px rgba(239,68,68,0.5)",
             animation: timeLeft <= 5 ? "blink 0.5s infinite" : "none",
           }} />
           <span style={{
-            fontSize: 28, fontWeight: 900, fontFamily: "monospace",
+            fontSize: 34, fontWeight: 900, fontFamily: "monospace",
             color: timeLeft <= 5 ? "#EF4444" : timeLeft <= 10 ? FB.gold : FB.text,
             animation: timerAnim,
           }}>
             {String(Math.floor(timeLeft / 60)).padStart(2, "0")}:{String(timeLeft % 60).padStart(2, "0")}
           </span>
         </div>
-        <div style={{ width: 1, height: 28, background: FB.border }} />
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 24, fontWeight: 900, color: accent }}>{matchCount}</div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: FB.textTer, textTransform: "uppercase", letterSpacing: 1 }}>Matches</div>
+        <div style={{ width: 1, height: 40, background: FB.border }} />
+        <div style={{ flex: 1, textAlign: "center", padding: "12px 0" }}>
+          <div style={{ fontSize: 26, fontWeight: 900, color: accent }}>{matchCount}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: FB.textTer, letterSpacing: 1 }}>MATCHES</div>
         </div>
-        <div style={{ width: 1, height: 28, background: FB.border }} />
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 20, fontWeight: 800, color: FB.gold }}>€{(commission / 1000).toFixed(1)}k</div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: FB.textTer, textTransform: "uppercase", letterSpacing: 1 }}>Commission</div>
+        <div style={{ width: 1, height: 40, background: FB.border }} />
+        <div style={{ flex: 1, textAlign: "center", padding: "12px 0" }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: FB.gold }}>€{commission > 0 ? (commission >= 1000 ? (commission / 1000).toFixed(1) + "k" : commission) : "0"}</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: FB.textTer, letterSpacing: 1 }}>COMMISSION</div>
         </div>
+        {!disabled && (
+          <>
+            <div style={{ width: 1, height: 40, background: FB.border }} />
+            <div onClick={onEndGame} style={{
+              flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              padding: "12px 0", cursor: "pointer", transition: "background 0.15s",
+            }}
+              onMouseOver={e => e.currentTarget.style.background = "#FEF2F2"}
+              onMouseOut={e => e.currentTarget.style.background = "transparent"}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#EF4444", letterSpacing: 1, marginTop: 2 }}>EXIT</div>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Progress bar */}
-      <div style={{ display: "flex", gap: 4, padding: "12px 24px 0" }}>
-        {["propertyType", "size", "priceRange", "location"].map(f => (
-          <div key={f} style={{ flex: 1, height: 4, borderRadius: 2, background: selections[f] ? accent : FB.border, transition: "background 0.3s" }} />
-        ))}
-      </div>
+      {/* Mini cards */}
+      {(matchedDeals.length > 0 || pendingItems.length > 0) && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, width: "100%", marginBottom: 24 }}>
+          {[...matchedDeals].reverse().map(deal => (
+            <MiniCard key={`m${deal.id}`} item={isListing ? deal.listing : deal.buyer} isMatched={true} isNew={deal.isNew} side={role} />
+          ))}
+          {pendingItems.map(item => (
+            <MiniCard key={`p${item.id}`} item={item} isMatched={false} isNew={false} side={role} />
+          ))}
+        </div>
+      )}
 
-      {/* Content area */}
-      <div style={{ padding: "16px 24px 24px", maxWidth: 520, margin: "0 auto", width: "100%" }}>
+      {/* Wizard content */}
+      <div style={{ width: "100%" }}>
 
-        {/* Mini cards */}
-        {(matchedDeals.length > 0 || pendingItems.length > 0) && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16, maxHeight: 90, overflow: "auto" }}>
-            {[...matchedDeals].reverse().map(deal => (
-              <MiniCard key={`m${deal.id}`} item={isListing ? deal.listing : deal.buyer} isMatched={true} isNew={deal.isNew} side={role} />
-            ))}
-            {pendingItems.map(item => (
-              <MiniCard key={`p${item.id}`} item={item} isMatched={false} isNew={false} side={role} />
-            ))}
+        {(step >= 0 && step <= 4) && (
+          <div key={step} style={{ animation: "fadeIn 0.3s ease-out" }}>
+            <div style={{
+              background: "#FFFFFF", borderRadius: 24, padding: "32px 28px",
+              border: `1.5px solid ${FB.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+            }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 24 }}>
+                <span style={{ fontSize: 24, fontWeight: 900, color: FB.text }}>{sectionTitle}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: FB.textTer }}>—</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: FB.textSec }}>{stepLabel}</span>
+              </div>
+              {step === 1 && (
+                <div style={{ display: "flex", gap: 16 }}>
+                  <OptionCard label="Apartment" icon={houseIcon(false)} selected={false} onClick={() => onSelect("propertyType", "Apartment")} wide />
+                  <OptionCard label="Villa" icon={villaIcon(false)} selected={false} onClick={() => onSelect("propertyType", "Villa")} wide />
+                </div>
+              )}
+              {step === 2 && (
+                <div style={{ display: "flex", gap: 14 }}>
+                  {SIZES.map(s => <OptionCard key={s} label={s} selected={false} onClick={() => onSelect("size", s)} />)}
+                </div>
+              )}
+              {step === 3 && (
+                <div style={{ display: "flex", gap: 14 }}>
+                  {(isListing ? LISTING_PRICES : BUYER_PRICES).map(p => <OptionCard key={p} label={p} selected={false} onClick={() => onSelect("priceRange", p)} />)}
+                </div>
+              )}
+              {step === 4 && (
+                <div style={{ display: "flex", gap: 14 }}>
+                  {LOCATIONS.map(l => (
+                    <div key={l.name} onClick={disabled ? undefined : () => onSelect("location", l.name)} style={{
+                      flex: 1, background: "#FFFFFF",
+                      border: `2.5px solid ${FB.border}`,
+                      borderRadius: 18, overflow: "hidden",
+                      cursor: disabled ? "default" : "pointer", transition: "all 0.2s",
+                      userSelect: "none", WebkitTapHighlightColor: "transparent",
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+                    }}>
+                      <img src={l.img} alt={l.name} style={{ width: "100%", height: 100, objectFit: "cover", display: "block" }} />
+                      <div style={{ padding: "14px 4px", textAlign: "center" }}>
+                        <span style={{ fontSize: 18, fontWeight: 700, color: FB.text }}>{l.name}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Property type */}
-        <div style={{ fontSize: 13, color: FB.textSec, letterSpacing: 1, fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
-          {isListing ? "1. Property type" : "What are they looking for?"}
-        </div>
-        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-          <TypeChip label="Apartment" icon={houseIcon} selected={selections.propertyType === "Apartment"} onClick={() => onSelect("propertyType", "Apartment")} />
-          <TypeChip label="Villa" icon={villaIcon} selected={selections.propertyType === "Villa"} onClick={() => onSelect("propertyType", "Villa")} />
-        </div>
-
-        {/* Size */}
-        <div style={{ fontSize: 13, color: FB.textSec, letterSpacing: 1, fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
-          {isListing ? "2. Size" : "Size"}
-        </div>
-        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {SIZES.map(s => <Chip key={s} label={s} selected={selections.size === s} onClick={() => onSelect("size", s)} />)}
-        </div>
-
-        {/* Price */}
-        <div style={{ fontSize: 13, color: FB.textSec, letterSpacing: 1, fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
-          {isListing ? "3. Price range" : "Budget range"}
-        </div>
-        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-          {(isListing ? LISTING_PRICES : BUYER_PRICES).map(p => <Chip key={p} label={p} selected={selections.priceRange === p} onClick={() => onSelect("priceRange", p)} />)}
-        </div>
-
-        {/* Location */}
-        <div style={{ fontSize: 13, color: FB.textSec, letterSpacing: 1, fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>
-          {isListing ? "4. Location" : "Preferred area"}
-        </div>
-        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-          {LOCATIONS.map(l => (
-            <div key={l.name} onClick={disabled ? undefined : () => onSelect("location", l.name)} style={{
-              flex: 1, background: selections.location === l.name ? accentLight : "#FFFFFF",
-              border: `2px solid ${selections.location === l.name ? accent : FB.border}`,
-              borderRadius: 14, overflow: "hidden",
-              cursor: disabled ? "default" : "pointer", transition: "all 0.2s",
-              userSelect: "none", WebkitTapHighlightColor: "transparent",
-              boxShadow: selections.location === l.name ? `0 4px 12px ${accent}25` : "0 1px 4px rgba(0,0,0,0.04)",
-            }}>
-              <img src={l.img} alt={l.name} style={{ width: "100%", height: 70, objectFit: "cover", display: "block" }} />
-              <div style={{ padding: "10px 4px", textAlign: "center" }}>
-                <span style={{ fontSize: 14, fontWeight: selections.location === l.name ? 800 : 600, color: selections.location === l.name ? accent : FB.text }}>{l.name}</span>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
+    </div>
     </div>
   );
 }
@@ -821,6 +843,9 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [durationInput, setDurationInput] = useState(String(gameDuration));
+  useEffect(() => { setDurationInput(String(gameDuration)); }, [gameDuration]);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => { fetchGames(); }, []);
 
@@ -836,9 +861,15 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
     await supabase.from("games").delete().eq("id", id);
   }
 
-  function handleDurationSave() {
+  async function handleDurationSave() {
     const val = parseInt(durationInput);
-    if (val >= 10 && val <= 600) onDurationChange(val);
+    if (val < 10 || val > 600 || isNaN(val)) return;
+    setSaving(true);
+    setSaved(false);
+    await onDurationChange(val);
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   }
 
   const totalMatches = games.reduce((s, g) => s + g.matches, 0);
@@ -890,13 +921,20 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
               onBlur={e => e.target.style.borderColor = FB.border}
             />
             <span style={{ fontSize: 16, color: FB.textSec, fontWeight: 600 }}>seconds</span>
-            <button onClick={handleDurationSave} style={{
-              padding: "12px 24px", fontSize: 14, fontWeight: 700, color: "#FFFFFF",
-              background: FB.primary, border: "none", borderRadius: 12, cursor: "pointer",
-              fontFamily: "system-ui",
-            }}>Save</button>
+            <button onClick={handleDurationSave} disabled={saving} style={{
+              padding: "12px 24px", fontSize: 14, fontWeight: 700,
+              color: saved ? "#FFFFFF" : "#FFFFFF",
+              background: saved ? "#54B329" : FB.primary,
+              border: "none", borderRadius: 12, cursor: saving ? "default" : "pointer",
+              fontFamily: "system-ui", transition: "background 0.2s", minWidth: 80,
+              opacity: saving ? 0.7 : 1,
+            }}>{saving ? "..." : saved ? "✓ Saved" : "Save"}</button>
           </div>
-          <div style={{ fontSize: 12, color: FB.textTer, marginTop: 8 }}>Min: 10s · Max: 600s · Current: {gameDuration}s ({Math.floor(gameDuration/60)}m {gameDuration%60}s)</div>
+          {saved && (
+            <div style={{ fontSize: 13, color: "#54B329", fontWeight: 600, marginTop: 8, animation: "fadeIn 0.3s ease-out" }}>
+              Game duration updated to {gameDuration}s ({Math.floor(gameDuration/60)}m {gameDuration%60}s)
+            </div>
+          )}
         </div>
 
         {/* Game history */}
@@ -947,16 +985,15 @@ function LeaderboardPage({ onBack }) {
   const [loading, setLoading] = useState(true);
 
   async function fetchLeaderboard() {
-    const { data } = await supabase.from("games").select("*").order("total_commission", { ascending: false }).limit(20);
+    const { data } = await supabase.from("games").select("*").order("total_commission", { ascending: false });
     if (data) {
       const teamMap = {};
       data.forEach(g => {
         const key = `${g.player1_name} & ${g.player2_name}`;
-        if (!teamMap[key]) teamMap[key] = { team: key, office: g.player1_office, matches: 0, commission: 0, gamesPlayed: 0, bestMatch: 0 };
+        if (!teamMap[key]) teamMap[key] = { team: key, p1: g.player1_name, p2: g.player2_name, office1: g.player1_office, office2: g.player2_office || g.player1_office, matches: 0, commission: 0, gamesPlayed: 0 };
         teamMap[key].matches += g.matches;
         teamMap[key].commission += Number(g.total_commission);
         teamMap[key].gamesPlayed += 1;
-        teamMap[key].bestMatch = Math.max(teamMap[key].bestMatch, g.matches);
       });
       setGames(Object.values(teamMap).sort((a, b) => b.commission - a.commission || b.matches - a.matches));
     }
@@ -966,111 +1003,143 @@ function LeaderboardPage({ onBack }) {
   useEffect(() => {
     fetchLeaderboard();
     const channel = supabase.channel("leaderboard-realtime")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "games" }, () => fetchLeaderboard())
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "games" }, () => fetchLeaderboard())
+      .on("postgres_changes", { event: "*", schema: "public", table: "games" }, () => fetchLeaderboard())
       .subscribe();
-    const poll = setInterval(fetchLeaderboard, 10000);
-    return () => { supabase.removeChannel(channel); clearInterval(poll); };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
+  const totalComm = games.reduce((s, g) => s + g.commission, 0);
+  const totalMatches = games.reduce((s, g) => s + g.matches, 0);
+  const totalGames = games.reduce((s, g) => s + g.gamesPlayed, 0);
   const medalColors = { 1: FB.gold, 2: "#94A3B8", 3: "#CD7F32" };
-  const medalEmojis = { 1: "🥇", 2: "🥈", 3: "🥉" };
+  const col1 = games.slice(0, 12);
+  const col2 = games.slice(12, 24);
+
+  const RankRow = ({ g, rank }) => {
+    const medal = medalColors[rank];
+    return (
+      <div style={{
+        background: "#FFFFFF", border: `1.5px solid ${FB.border}`, borderRadius: 16, padding: "16px",
+        animation: `lbRowFade 0.4s ${0.05 + rank * 0.03}s ease-out both`,
+        boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
+        display: "flex", gap: 14, alignItems: "center",
+      }}>
+        {/* Rank */}
+        <div style={{
+          width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+          background: medal ? `${medal}22` : FB.bgSec, border: `2px solid ${medal || FB.border}`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 16, fontWeight: 900, color: medal || FB.textSec,
+        }}>{rank}</div>
+
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Names */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <span style={{ fontSize: 16, fontWeight: 800, color: FB.text }}>{g.p1}</span>
+            <span style={{ fontSize: 13, color: FB.textTer, fontWeight: 600 }}>&</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: FB.text }}>{g.p2}</span>
+          </div>
+          {/* Offices stacked */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: FB.textSec }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={FB.primary} strokeWidth="2" style={{ flexShrink: 0 }}><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.office1}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: FB.textSec }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#54B329" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.office2}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: FB.gold }}>€{g.commission.toLocaleString()}</div>
+          <div style={{ fontSize: 12, color: FB.textTer, marginTop: 2 }}>{g.matches} matches</div>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div style={{ minHeight: "100vh", background: FB.bg, color: FB.text, fontFamily: "system-ui,-apple-system,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: `linear-gradient(180deg, #EEF1FE 0%, ${FB.bg} 30%)`, color: FB.text, fontFamily: "system-ui,-apple-system,sans-serif", padding: "32px" }}>
       {/* Header */}
-      <div style={{
-        background: "#FFFFFF", padding: "20px 28px", display: "flex", alignItems: "center", justifyContent: "space-between",
-        borderBottom: `1px solid ${FB.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-      }}>
-        <div onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: FB.textSec, fontSize: 16, fontWeight: 600 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke={FB.textSec} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          Back
+      <div style={{ textAlign: "center", marginBottom: 32, maxWidth: 1200, margin: "0 auto 32px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 8 }}>
+          <img src="/fizbot-icon.png" alt="Fizbot" style={{ width: 40, height: 40, borderRadius: 10 }} />
+          <span style={{ fontSize: 28, fontWeight: 900, background: `linear-gradient(135deg,${FB.primary400},${FB.coral})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Match It!</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="14" width="4" height="7" rx="1" stroke={FB.gold} strokeWidth="1.5" />
-            <rect x="10" y="8" width="4" height="13" rx="1" stroke={FB.gold} strokeWidth="1.5" />
-            <rect x="17" y="11" width="4" height="10" rx="1" stroke={FB.gold} strokeWidth="1.5" />
-          </svg>
-          <span style={{ fontSize: 22, fontWeight: 800 }}>Leaderboard</span>
-        </div>
-        <div style={{
-          fontSize: 12, color: "#54B329", background: "#DCFCE7",
-          border: `1.5px solid #54B32933`, borderRadius: 20,
-          padding: "5px 14px", fontWeight: 700, letterSpacing: 1, animation: "pulse4 2s infinite",
-          display: "flex", alignItems: "center", gap: 6,
-        }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#54B329" }} />
-          LIVE
-        </div>
+        <span style={{ fontSize: 36, fontWeight: 900, color: FB.text }}>🏆 Leaderboard</span>
       </div>
 
-      {/* Podium */}
-      {games.length >= 3 && (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: 16, padding: "40px 28px 24px" }}>
-          {[1, 0, 2].map(idx => {
-            const g = games[idx];
-            if (!g) return null;
-            const actualRank = idx === 1 ? 1 : idx === 0 ? 2 : 3;
-            const isFirst = actualRank === 1;
-            const height = isFirst ? 130 : actualRank === 2 ? 100 : 85;
-            const medal = medalColors[actualRank];
-            return (
-              <div key={g.team} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: isFirst ? 160 : 120, animation: `lbRowFade 0.5s ${actualRank * 0.15}s ease-out both` }}>
-                <div style={{ fontSize: 36, marginBottom: 6 }}>{medalEmojis[actualRank]}</div>
-                <div style={{ fontSize: isFirst ? 16 : 14, fontWeight: 800, color: FB.text, textAlign: "center", marginBottom: 4, lineHeight: 1.2 }}>{g.team}</div>
-                <div style={{ fontSize: 12, color: FB.textTer, marginBottom: 10 }}>{g.office}</div>
+      {loading ? (
+        <div style={{ textAlign: "center", color: FB.textTer, padding: 80 }}>
+          <div style={{ width: 40, height: 40, borderRadius: "50%", border: `3px solid ${FB.border}`, borderTopColor: FB.primary, animation: "spin 1s linear infinite", margin: "0 auto 16px" }} />
+          <span style={{ fontSize: 18 }}>Loading...</span>
+        </div>
+      ) : games.length === 0 ? (
+        <div style={{ textAlign: "center", color: FB.textTer, padding: 80, fontSize: 22 }}>No games played yet. Be the first!</div>
+      ) : (
+        <div style={{ display: "flex", gap: 32, maxWidth: 1200, margin: "0 auto" }}>
+          {/* Left: Stats */}
+          <div style={{ width: 320, flexShrink: 0 }}>
+            <div style={{ position: "sticky", top: 32 }}>
+              {/* Total Commission - big hero */}
+              <div style={{
+                background: `linear-gradient(135deg, ${FB.primary}, ${FB.primary400})`,
+                borderRadius: 24, padding: "36px 28px", textAlign: "center", marginBottom: 16,
+                boxShadow: "0 8px 32px rgba(28,70,245,0.25)", animation: "pulse4 4s infinite",
+              }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.7)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>Total Commission</div>
+                <div style={{ fontSize: 48, fontWeight: 900, color: "#FFFFFF" }}>€{totalComm.toLocaleString()}</div>
+              </div>
+
+              {/* Games & Matches */}
+              <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
                 <div style={{
-                  width: "100%", height, borderRadius: "16px 16px 0 0",
-                  background: `linear-gradient(180deg, ${medal}33, ${medal}11)`, border: `2px solid ${medal}44`, borderBottom: "none",
-                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6,
+                  flex: 1, background: "#FFFFFF", borderRadius: 20, padding: "24px 16px", textAlign: "center",
+                  border: `1.5px solid ${FB.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
                 }}>
-                  <div style={{ fontSize: isFirst ? 24 : 20, fontWeight: 900, color: FB.gold }}>€{g.commission.toLocaleString()}</div>
-                  <div style={{ fontSize: 13, color: FB.textSec, fontWeight: 600 }}>{g.matches} matches</div>
-                  <div style={{ fontSize: 11, color: FB.textTer }}>{g.gamesPlayed} games</div>
+                  <div style={{ fontSize: 40, fontWeight: 900, color: FB.primary }}>{totalGames}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: FB.textTer, letterSpacing: 1, textTransform: "uppercase", marginTop: 4 }}>Games</div>
+                </div>
+                <div style={{
+                  flex: 1, background: "#FFFFFF", borderRadius: 20, padding: "24px 16px", textAlign: "center",
+                  border: `1.5px solid ${FB.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                }}>
+                  <div style={{ fontSize: 40, fontWeight: 900, color: "#54B329" }}>{totalMatches}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: FB.textTer, letterSpacing: 1, textTransform: "uppercase", marginTop: 4 }}>Matches</div>
                 </div>
               </div>
-            );
-          })}
+
+              {/* Top player highlight */}
+              {games[0] && (
+                <div style={{
+                  background: `${FB.gold}10`, border: `2px solid ${FB.gold}44`, borderRadius: 20, padding: "20px 24px", textAlign: "center",
+                }}>
+                  <div style={{ fontSize: 32, marginBottom: 4 }}>👑</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: FB.text }}>{games[0].team}</div>
+                  <div style={{ fontSize: 14, color: FB.textSec, marginTop: 4 }}>{games[0].office1} · {games[0].office2}</div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: FB.gold, marginTop: 8 }}>€{games[0].commission.toLocaleString()}</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Two columns of rankings */}
+          <div style={{ flex: 1, display: "flex", gap: 16 }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+              {col1.map((g, i) => <RankRow key={g.team} g={g} rank={i + 1} />)}
+            </div>
+            {col2.length > 0 && (
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
+                {col2.map((g, i) => <RankRow key={g.team} g={g} rank={i + 13} />)}
+              </div>
+            )}
+          </div>
         </div>
       )}
-
-      {/* Rest of list */}
-      <div style={{ padding: "0 28px 40px", maxWidth: 640, margin: "0 auto" }}>
-        {loading ? (
-          <div style={{ textAlign: "center", color: FB.textTer, padding: 60 }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", border: `3px solid ${FB.border}`, borderTopColor: FB.primary, animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
-            <span style={{ fontSize: 16 }}>Loading...</span>
-          </div>
-        ) : games.length === 0 ? (
-          <div style={{ textAlign: "center", color: FB.textTer, padding: 60, fontSize: 18 }}>No games played yet. Be the first!</div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: games.length >= 3 ? 0 : 20 }}>
-            {games.map((g, i) => {
-              const rank = i + 1;
-              if (rank <= 3 && games.length >= 3) return null;
-              return (
-                <div key={`${g.team}-${i}`} style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  background: "#FFFFFF", border: `1.5px solid ${FB.border}`, borderRadius: 16, padding: "16px 20px",
-                  animation: `lbRowFade 0.4s ${0.1 + i * 0.05}s ease-out both`,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: 12, background: FB.bgSec, border: `1.5px solid ${FB.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: FB.textSec }}>{rank}</div>
-                    <div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: FB.text }}>{g.team}</div>
-                      <div style={{ fontSize: 12, color: FB.textTer }}>{g.office} · {g.gamesPlayed} games · {g.matches} matches</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: FB.gold }}>€{g.commission.toLocaleString()}</div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
@@ -1157,9 +1226,12 @@ export default function DealRushForm() {
   const allSelected = selections.propertyType && selections.size && selections.priceRange && selections.location;
   const prevAllSelected = useRef(false);
 
+  const submitTimer = useRef(null);
   useEffect(() => {
     if (allSelected && !prevAllSelected.current && gameState === "playing") {
       prevAllSelected.current = true;
+      if (submitTimer.current) clearTimeout(submitTimer.current);
+      submitTimer.current = setTimeout(() => {
       const item = { ...selections, id: ++idRef.current };
       channelRef.current?.send({ type: "broadcast", event: role === "listing" ? "listing_submitted" : "buyer_submitted", payload: item });
       if (role === "listing") {
@@ -1172,8 +1244,9 @@ export default function DealRushForm() {
         else setBuyers(prev => [...prev, item]);
       }
       setSelections({ ...emptySelection });
+      }, 600);
     }
-    if (!allSelected) prevAllSelected.current = false;
+    if (!allSelected) { prevAllSelected.current = false; if (submitTimer.current) clearTimeout(submitTimer.current); }
   }, [allSelected, gameState, role, selections]);
 
   function handleMatch(listing, buyer) {
@@ -1291,7 +1364,7 @@ export default function DealRushForm() {
   const handleSelect = useCallback((field, value) => {
     if (gameState !== "playing") return;
     playSound("click", 0.3);
-    setSelections(p => ({ ...p, [field]: p[field] === value ? null : value }));
+    setSelections(p => ({ ...p, [field]: value }));
   }, [gameState]);
 
   return (
@@ -1299,10 +1372,10 @@ export default function DealRushForm() {
       minHeight: "100vh", background: FB.bg, color: FB.text,
       fontFamily: "system-ui,-apple-system,sans-serif",
       display: "flex", flexDirection: "column", position: "relative",
-      animation: screenShake ? "screenShake 0.5s ease-out" : "none",
     }}>
       <style>{`
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes stepIn{0%{opacity:0;transform:translateX(40px) scale(0.97)}100%{opacity:1;transform:translateX(0) scale(1)}}
         @keyframes scoreIn{from{opacity:0;transform:scale(0.5) translateY(30px)}to{opacity:1;transform:scale(1) translateY(0)}}
         @keyframes fwPop{0%{opacity:1;transform:scale(0)}60%{opacity:1}100%{opacity:0;transform:scale(1)}}
         @keyframes confDrop{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(110vh) rotate(720deg)}}
@@ -1331,9 +1404,9 @@ export default function DealRushForm() {
       `}</style>
 
       {gameState === "lobby" && <LobbyScreen onJoin={handleJoin} onSettings={() => setGameState("settings")} onLeaderboard={() => setGameState("leaderboard")} takenRole={takenRole} takenByName={takenByName} />}
-      {gameState === "settings" && <SettingsPage onBack={() => setGameState("lobby")} gameDuration={gameDuration} onDurationChange={(v) => {
+      {gameState === "settings" && <SettingsPage onBack={() => setGameState("lobby")} gameDuration={gameDuration} onDurationChange={async (v) => {
         setGameDuration(v); setTimeLeft(v);
-        supabase.from("settings").upsert({ key: "game_duration", value: String(v) });
+        await supabase.from("settings").upsert({ key: "game_duration", value: String(v) });
       }} />}
       {gameState === "leaderboard" && <LeaderboardPage onBack={() => setGameState("lobby")} />}
       {gameState === "waiting" && <WaitingScreen player={player} role={role} onExit={handleReplay} />}
@@ -1391,7 +1464,6 @@ export default function DealRushForm() {
           onEndGame={handleEndGame} />
       )}
 
-      <MatchOverlay show={showMatch} />
       {gameState === "finished" && (
         <EndScreen matches={matchCount} commission={totalCommission} matchedDeals={matchedDeals}
           onReplay={handleReplay} player1={player} player2={partner} leaderboardData={leaderboardData} />
