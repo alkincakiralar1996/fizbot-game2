@@ -104,7 +104,14 @@ function MiniCard({ item, isMatched, isNew, side }) {
       boxShadow: isMatched ? `0 4px 16px ${accent}20` : "0 2px 6px rgba(0,0,0,0.04)",
       position: "relative", width: 140, flexShrink: 0,
     }}>
-      {item.img && <img src={item.img} alt={item.propertyType} style={{ width: "100%", height: 100, objectFit: "cover", display: "block" }} />}
+      {item.img ? (
+        <img src={item.img} alt={item.propertyType} style={{ width: "100%", height: 100, objectFit: "cover", display: "block" }}
+          onError={e => { e.target.style.display = "none"; }} />
+      ) : (
+        <div style={{ width: "100%", height: 100, background: FB.bgSec, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={FB.textDim} strokeWidth="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </div>
+      )}
       {isMatched && (
         <div style={{
           position: "absolute", top: 0, left: 0, right: 0, height: 100,
@@ -271,13 +278,15 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
     const teamName = `${player1?.name || "Player 1"} & ${player2?.name || "Player 2"}`;
     const all = (leaderboardData || []).map(entry => ({
       ...entry,
-      isPlayer: gameSessionId ? entry.id === gameSessionId : false,
+      isPlayer: gameSessionId ? entry.id === gameSessionId
+        : (entry.team === teamName && entry.matches === matches && entry.commission === commission),
     }));
     // If our game wasn't found in DB data (insert not yet committed), add it
     if (!all.find(e => e.isPlayer)) {
       all.push({ team: teamName, matches, commission, isPlayer: true });
     }
-    all.sort((a, b) => b.commission - a.commission || b.matches - a.matches);
+    // Stable sort: tie-break by id descending (newer games first)
+    all.sort((a, b) => b.commission - a.commission || b.matches - a.matches || (b.id || 0) - (a.id || 0));
     return all.map((entry, i) => ({ ...entry, rank: i + 1 }));
   }, [matches, commission, leaderboardData, player1, player2, gameSessionId]);
 
@@ -286,7 +295,7 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
       position: "fixed", inset: 0, zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center",
       background: "rgba(255,255,255,0.92)", backdropFilter: "blur(20px)", animation: "fadeIn 0.5s", overflow: "auto",
     }}>
-      <div style={{ zIndex: 10, maxWidth: 600, width: "100%", padding: "32px 28px", animation: "scoreIn 0.8s 0.3s ease-out both" }}>
+      <div style={{ zIndex: 10, maxWidth: 600, width: "100%", padding: "32px 16px", animation: "scoreIn 0.8s 0.3s ease-out both", boxSizing: "border-box" }}>
         {/* ─── SUMMARY ─── */}
         {phase === "summary" && (
           <div style={{ textAlign: "center" }}>
@@ -593,7 +602,7 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
       {/* Mini cards */}
       {(matchedDeals.length > 0 || pendingItems.length > 0) && (
         <div style={{ display: "flex", gap: 12, width: "100%", marginBottom: 24, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 4 }}>
-          {[...matchedDeals].reverse().map(deal => (
+          {matchedDeals.slice().reverse().map(deal => (
             <MiniCard key={`m${deal.id}`} item={isListing ? deal.listing : deal.buyer} isMatched={true} isNew={deal.isNew} side={role} />
           ))}
           {pendingItems.map(item => (
@@ -631,10 +640,10 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
                 </div>
               )}
               {step === 4 && (
-                <div style={{ display: "flex", gap: 14 }}>
+                <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
                   {LOCATIONS.map(l => (
                     <div key={l.name} onClick={disabled ? undefined : () => onSelect("location", l.name)} style={{
-                      flex: 1, background: "#FFFFFF",
+                      flex: "1 1 120px", minWidth: 120, background: "#FFFFFF",
                       border: `2.5px solid ${FB.border}`,
                       borderRadius: 18, overflow: "hidden",
                       cursor: disabled ? "default" : "pointer", transition: "all 0.2s",
@@ -968,8 +977,10 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
   }
 
   async function deleteGame(id) {
+    const backup = games;
     setGames(prev => prev.filter(g => g.id !== id));
-    await supabase.from("games").delete().eq("id", id);
+    const { error } = await supabase.from("games").delete().eq("id", id);
+    if (error) { console.error("Delete failed:", error); setGames(backup); }
   }
 
   async function handleDurationSave() {
@@ -1075,7 +1086,7 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
         <div style={{ background: "#FFFFFF", border: `2px solid ${FB.border}`, borderRadius: 16, padding: "18px 20px", marginBottom: 28, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: FB.textSec, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>Game Duration</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <input value={durationInput} onChange={e => setDurationInput(e.target.value.replace(/\D/g, ""))}
+            <input value={durationInput} onChange={e => { const v = e.target.value.replace(/\D/g, "").slice(0, 3); setDurationInput(v); }}
               style={{
                 flex: 1, padding: "12px 16px", fontSize: 18, fontWeight: 700, background: FB.bgSec,
                 border: `1.5px solid ${FB.border}`, borderRadius: 12, color: FB.text, outline: "none",
@@ -1424,6 +1435,15 @@ export default function DealRushForm() {
     }
   }, [gameState, role, player]);
 
+  // Release role on page close/refresh
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      lobbyChannelRef.current?.send({ type: "broadcast", event: "role_released", payload: {} });
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
   // Hash routing
   useEffect(() => {
     if (gameState === "leaderboard") window.location.hash = "leaderboard";
@@ -1510,8 +1530,8 @@ export default function DealRushForm() {
       .on("broadcast", { event: "player_ready" }, ({ payload }) => { setPartner(payload.player); setGameState("countdown"); })
       .on("broadcast", { event: "listing_submitted" }, ({ payload }) => { handlePartnerListing(payload); })
       .on("broadcast", { event: "buyer_submitted" }, ({ payload }) => { handlePartnerBuyer(payload); })
-      .on("broadcast", { event: "match_found" }, () => {})
-      .on("broadcast", { event: "timer_sync" }, ({ payload }) => { setTimeLeft(payload.timeLeft); if (payload.timeLeft <= 0) setGameState("finished"); })
+      .on("broadcast", { event: "match_found" }, () => { /* Match handled locally by each client */ })
+      .on("broadcast", { event: "timer_sync" }, ({ payload }) => { setTimeLeft(Math.max(payload.timeLeft, 0)); if (payload.timeLeft <= 0) { if (timerRef.current) clearInterval(timerRef.current); setGameState("finished"); } })
       .on("broadcast", { event: "game_end" }, () => { if (timerRef.current) clearInterval(timerRef.current); setTimeLeft(0); setGameState("finished"); })
       .subscribe((status) => { if (status === "SUBSCRIBED") channel.send({ type: "broadcast", event: "player_joined", payload: { player: playerInfo, role: selectedRole } }); });
     channelRef.current = channel;
@@ -1538,7 +1558,8 @@ export default function DealRushForm() {
     playSound("gamestart", 0.6);
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
-        const next = prev - 1;
+        if (prev <= 0) return 0;
+        const next = Math.max(prev - 1, 0);
         if (role === "listing") channelRef.current?.send({ type: "broadcast", event: "timer_sync", payload: { timeLeft: next } });
         if (next <= 0) { clearInterval(timerRef.current); setGameState("finished"); return 0; }
         return next;
@@ -1564,10 +1585,15 @@ export default function DealRushForm() {
       });
     };
     if (role === "listing" && player && partner) {
-      supabase.from("games").insert({ player1_name: player.name, player1_office: player.office, player2_name: partner.name, player2_office: partner.office, matches: matchCount, total_commission: totalCommission }).select().then(({ data }) => {
+      const p1 = player, p2 = partner;
+      supabase.from("games").insert({ player1_name: p1.name, player1_office: p1.office, player2_name: p2.name, player2_office: p2.office, matches: matchCount, total_commission: totalCommission }).select().then(({ data, error }) => {
+        if (error) console.error("Game insert failed:", error);
         if (data?.[0]) setGameSessionId(data[0].id);
         fetchLeaderboard();
       });
+    } else if (role === "buyer" && player && partner) {
+      // Buyer waits briefly for listing agent's insert, then fetches
+      setTimeout(fetchLeaderboard, 1500);
     } else {
       fetchLeaderboard();
     }
@@ -1586,6 +1612,7 @@ export default function DealRushForm() {
       lobbyChannelRef.current.send({ type: "broadcast", event: "role_released", payload: {} });
     }
     if (channelRef.current) { supabase.removeChannel(channelRef.current); channelRef.current = null; }
+    if (presenceChannelRef.current) { presenceChannelRef.current.untrack(); supabase.removeChannel(presenceChannelRef.current); presenceChannelRef.current = null; }
     setGameState("lobby"); setRole(null); setPlayer(null); setPartner(null);
     setTimeLeft(gameDuration); setMatchCount(0); setTotalCommission(0);
     setSelections({ ...emptySelection }); setListings([]); setBuyers([]); setMatchedDeals([]); setGameSessionId(null); idRef.current = 0;
@@ -1602,6 +1629,7 @@ export default function DealRushForm() {
       minHeight: "100vh", background: FB.bg, color: FB.text,
       fontFamily: "system-ui,-apple-system,sans-serif",
       display: "flex", flexDirection: "column", position: "relative",
+      animation: screenShake ? "screenShake 0.5s ease-out" : "none",
     }}>
       <style>{`
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
