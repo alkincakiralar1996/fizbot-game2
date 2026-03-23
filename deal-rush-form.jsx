@@ -602,7 +602,7 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
       {/* Mini cards */}
       {(matchedDeals.length > 0 || pendingItems.length > 0) && (
         <div style={{ display: "flex", gap: 12, width: "100%", marginBottom: 24, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 4 }}>
-          {matchedDeals.slice().reverse().map(deal => (
+          {matchedDeals.filter(d => d.visible !== false).slice().reverse().map(deal => (
             <MiniCard key={`m${deal.id}`} item={isListing ? deal.listing : deal.buyer} isMatched={true} isNew={deal.isNew} side={role} />
           ))}
           {pendingItems.map(item => (
@@ -1350,8 +1350,8 @@ export default function DealRushForm() {
   const emptySelection = { propertyType: null, size: null, priceRange: null, location: null };
   const listingsRef = useRef([]);
   const buyersRef = useRef([]);
-  useEffect(() => { listingsRef.current = listings; }, [listings]);
-  useEffect(() => { buyersRef.current = buyers; }, [buyers]);
+  const updateListings = (fn) => { const next = typeof fn === 'function' ? fn(listingsRef.current) : fn; listingsRef.current = next; setListings(next); };
+  const updateBuyers = (fn) => { const next = typeof fn === 'function' ? fn(buyersRef.current) : fn; buyersRef.current = next; setBuyers(next); };
 
   // Presence tracking for admin
   const presenceChannelRef = useRef(null);
@@ -1382,7 +1382,7 @@ export default function DealRushForm() {
   useEffect(() => {
     if (gameState !== "lobby" && gameState !== "countdown" && gameState !== "settings") return;
     supabase.from("settings").select("value").eq("key", "game_duration").single().then(({ data }) => {
-      if (data) { const v = parseInt(data.value); setGameDuration(v); if (gameState !== "settings") setTimeLeft(v); }
+      if (data) { const v = parseInt(data.value); if (!isNaN(v) && v >= 10 && v <= 600) { setGameDuration(v); if (gameState !== "settings") setTimeLeft(v); } }
     });
   }, [gameState]);
 
@@ -1471,21 +1471,23 @@ export default function DealRushForm() {
       prevAllSelected.current = true;
       if (submitTimer.current) clearTimeout(submitTimer.current);
       submitTimer.current = setTimeout(() => {
+      if (gameStateRef.current !== "playing") return;
       const item = { ...selections, id: ++idRef.current, img: randomListingImg() };
       channelRef.current?.send({ type: "broadcast", event: role === "listing" ? "listing_submitted" : "buyer_submitted", payload: item });
       if (role === "listing") {
         const matchIdx = buyersRef.current.findIndex(b => item.propertyType === b.propertyType && item.size === b.size && PRICE_MATCH_MAP[item.priceRange] === b.priceRange && item.location === b.location);
-        if (matchIdx !== -1) { handleMatch(item, buyersRef.current[matchIdx]); setBuyers(prev => prev.filter((_, i) => i !== matchIdx)); }
-        else setListings(prev => [...prev, item]);
+        if (matchIdx !== -1) { handleMatch(item, buyersRef.current[matchIdx]); updateBuyers(prev => prev.filter((_, i) => i !== matchIdx)); }
+        else updateListings(prev => [...prev, item]);
       } else {
         const matchIdx = listingsRef.current.findIndex(l => l.propertyType === item.propertyType && l.size === item.size && PRICE_MATCH_MAP[l.priceRange] === item.priceRange && l.location === item.location);
-        if (matchIdx !== -1) { handleMatch(listingsRef.current[matchIdx], item); setListings(prev => prev.filter((_, i) => i !== matchIdx)); }
-        else setBuyers(prev => [...prev, item]);
+        if (matchIdx !== -1) { handleMatch(listingsRef.current[matchIdx], item); updateListings(prev => prev.filter((_, i) => i !== matchIdx)); }
+        else updateBuyers(prev => [...prev, item]);
       }
       setSelections({ ...emptySelection });
       }, 600);
     }
     if (!allSelected) { prevAllSelected.current = false; if (submitTimer.current) clearTimeout(submitTimer.current); }
+    return () => { if (submitTimer.current) clearTimeout(submitTimer.current); };
   }, [allSelected, gameState, role, selections]);
 
   function handleMatch(listing, buyer) {
@@ -1496,10 +1498,12 @@ export default function DealRushForm() {
     setScreenShake(true);
     playSound("match", 0.6);
     setTimeout(() => playSound("commission", 0.5), 300);
-    // Card stamp appears after fullscreen overlay fades
+    const dealId = ++idRef.current;
+    // Add deal immediately so EndScreen always has complete data; visible:false delays GamePanel card
+    setMatchedDeals(prev => [...prev, { listing, buyer, id: dealId, isNew: true, visible: false }]);
     setTimeout(() => {
-      setMatchedDeals(prev => [...prev, { listing, buyer, id: ++idRef.current, isNew: true }]);
-      setTimeout(() => setMatchedDeals(prev => prev.map(d => ({ ...d, isNew: false }))), 1500);
+      setMatchedDeals(prev => prev.map(d => d.id === dealId ? { ...d, visible: true } : d));
+      setTimeout(() => setMatchedDeals(prev => prev.map(d => d.id === dealId ? { ...d, isNew: false } : d)), 1500);
     }, 1200);
     setTimeout(() => { setShowMatch(false); setScreenShake(false); }, 1600);
     channelRef.current?.send({ type: "broadcast", event: "match_found", payload: { listing, buyer, commission } });
@@ -1508,15 +1512,15 @@ export default function DealRushForm() {
   function handlePartnerListing(item) {
     if (!item.img) item.img = randomListingImg();
     const matchIdx = buyersRef.current.findIndex(b => item.propertyType === b.propertyType && item.size === b.size && PRICE_MATCH_MAP[item.priceRange] === b.priceRange && item.location === b.location);
-    if (matchIdx !== -1) { handleMatch(item, buyersRef.current[matchIdx]); setBuyers(prev => prev.filter((_, i) => i !== matchIdx)); }
-    else setListings(prev => [...prev, item]);
+    if (matchIdx !== -1) { handleMatch(item, buyersRef.current[matchIdx]); updateBuyers(prev => prev.filter((_, i) => i !== matchIdx)); }
+    else updateListings(prev => [...prev, item]);
   }
 
   function handlePartnerBuyer(item) {
     if (!item.img) item.img = randomListingImg();
     const matchIdx = listingsRef.current.findIndex(l => l.propertyType === item.propertyType && l.size === item.size && PRICE_MATCH_MAP[l.priceRange] === item.priceRange && l.location === item.location);
-    if (matchIdx !== -1) { handleMatch(listingsRef.current[matchIdx], item); setListings(prev => prev.filter((_, i) => i !== matchIdx)); }
-    else setBuyers(prev => [...prev, item]);
+    if (matchIdx !== -1) { handleMatch(listingsRef.current[matchIdx], item); updateListings(prev => prev.filter((_, i) => i !== matchIdx)); }
+    else updateBuyers(prev => [...prev, item]);
   }
 
   const handleJoin = useCallback((name, office, selectedRole) => {
@@ -1531,8 +1535,8 @@ export default function DealRushForm() {
       .on("broadcast", { event: "listing_submitted" }, ({ payload }) => { handlePartnerListing(payload); })
       .on("broadcast", { event: "buyer_submitted" }, ({ payload }) => { handlePartnerBuyer(payload); })
       .on("broadcast", { event: "match_found" }, () => { /* Match handled locally by each client */ })
-      .on("broadcast", { event: "timer_sync" }, ({ payload }) => { setTimeLeft(Math.max(payload.timeLeft, 0)); if (payload.timeLeft <= 0) { if (timerRef.current) clearInterval(timerRef.current); setGameState("finished"); } })
-      .on("broadcast", { event: "game_end" }, () => { if (timerRef.current) clearInterval(timerRef.current); setTimeLeft(0); setGameState("finished"); })
+      .on("broadcast", { event: "timer_sync" }, ({ payload }) => { if (gameStateRef.current !== "playing") return; setTimeLeft(Math.max(payload.timeLeft, 0)); if (payload.timeLeft <= 0) { if (timerRef.current) clearInterval(timerRef.current); setGameState("finished"); } })
+      .on("broadcast", { event: "game_end" }, () => { if (gameStateRef.current !== "playing") return; if (timerRef.current) clearInterval(timerRef.current); setTimeLeft(0); setGameState("finished"); })
       .subscribe((status) => { if (status === "SUBSCRIBED") channel.send({ type: "broadcast", event: "player_joined", payload: { player: playerInfo, role: selectedRole } }); });
     channelRef.current = channel;
   }, []);
@@ -1615,7 +1619,7 @@ export default function DealRushForm() {
     if (presenceChannelRef.current) { presenceChannelRef.current.untrack(); supabase.removeChannel(presenceChannelRef.current); presenceChannelRef.current = null; }
     setGameState("lobby"); setRole(null); setPlayer(null); setPartner(null);
     setTimeLeft(gameDuration); setMatchCount(0); setTotalCommission(0);
-    setSelections({ ...emptySelection }); setListings([]); setBuyers([]); setMatchedDeals([]); setGameSessionId(null); idRef.current = 0;
+    setSelections({ ...emptySelection }); updateListings([]); updateBuyers([]); setMatchedDeals([]); setGameSessionId(null); idRef.current = 0;
   }, [gameDuration]);
 
   const handleSelect = useCallback((field, value) => {
