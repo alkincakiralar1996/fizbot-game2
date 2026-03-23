@@ -940,6 +940,23 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
   useEffect(() => { setDurationInput(String(gameDuration)); }, [gameDuration]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [activeSessions, setActiveSessions] = useState([]);
+
+  // Subscribe to presence for active sessions
+  useEffect(() => {
+    const ch = supabase.channel("game-presence");
+    function syncPresence() {
+      const state = ch.presenceState();
+      const users = [];
+      Object.values(state).forEach(presences => {
+        presences.forEach(p => users.push(p));
+      });
+      setActiveSessions(users);
+    }
+    ch.on("presence", { event: "sync" }, syncPresence)
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, []);
 
   useEffect(() => { fetchGames(); }, []);
 
@@ -1008,6 +1025,50 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
               <div style={{ fontSize: 12, color: FB.textTer, marginTop: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>{s.label}</div>
             </div>
           ))}
+        </div>
+
+        {/* Active Sessions */}
+        <div style={{ background: "#FFFFFF", border: `2px solid ${FB.border}`, borderRadius: 16, padding: "18px 20px", marginBottom: 28, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: FB.textSec, textTransform: "uppercase", letterSpacing: 1 }}>Active Sessions</div>
+            <div style={{
+              padding: "4px 12px", borderRadius: 20, fontSize: 13, fontWeight: 700,
+              background: activeSessions.length > 0 ? "#DCFCE7" : FB.bgSec,
+              color: activeSessions.length > 0 ? "#16A34A" : FB.textTer,
+            }}>{activeSessions.length} online</div>
+          </div>
+          {activeSessions.length === 0 ? (
+            <div style={{ textAlign: "center", color: FB.textTer, padding: "20px 0", fontSize: 14 }}>No active sessions</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {activeSessions.map((s, i) => {
+                const stateColor = s.state === "playing" ? "#16A34A" : s.state === "waiting" ? FB.gold : FB.primary;
+                const stateLabel = s.state === "playing" ? "Playing" : s.state === "waiting" ? "Waiting" : s.state === "countdown" ? "Starting" : s.state;
+                return (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "12px 14px", borderRadius: 12, background: FB.bgSec,
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: stateColor, flexShrink: 0, animation: s.state === "playing" ? "pulse4 2s infinite" : "none" }} />
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: FB.text }}>
+                          {s.name}{s.partnerName ? ` & ${s.partnerName}` : ""}
+                        </div>
+                        <div style={{ fontSize: 12, color: FB.textTer, marginTop: 2 }}>
+                          {s.office} · {s.role === "listing" ? "Listing" : "Buyer"}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{
+                      padding: "4px 10px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                      color: stateColor, background: `${stateColor}15`,
+                    }}>{stateLabel}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Game Duration */}
@@ -1280,6 +1341,31 @@ export default function DealRushForm() {
   const buyersRef = useRef([]);
   useEffect(() => { listingsRef.current = listings; }, [listings]);
   useEffect(() => { buyersRef.current = buyers; }, [buyers]);
+
+  // Presence tracking for admin
+  const presenceChannelRef = useRef(null);
+  useEffect(() => {
+    const activeStates = ["waiting", "countdown", "playing"];
+    if (activeStates.includes(gameState) && player) {
+      if (!presenceChannelRef.current) {
+        const ch = supabase.channel("game-presence", { config: { presence: { key: player.name + "-" + Date.now() } } });
+        ch.subscribe(async (status) => {
+          if (status === "SUBSCRIBED") {
+            await ch.track({ name: player.name, office: player.office, role, state: gameState, partnerName: partner?.name, joinedAt: new Date().toISOString() });
+          }
+        });
+        presenceChannelRef.current = ch;
+      } else {
+        presenceChannelRef.current.track({ name: player.name, office: player.office, role, state: gameState, partnerName: partner?.name, joinedAt: new Date().toISOString() });
+      }
+    } else {
+      if (presenceChannelRef.current) {
+        presenceChannelRef.current.untrack();
+        supabase.removeChannel(presenceChannelRef.current);
+        presenceChannelRef.current = null;
+      }
+    }
+  }, [gameState, player, partner, role]);
 
   // Load game duration from DB whenever returning to lobby (covers mount + replay)
   useEffect(() => {
