@@ -133,66 +133,73 @@ function MiniCard({ item, isMatched, isNew, side }) {
 }
 
 function LeaderboardList({ leaderboard }) {
-  const scrollRef = useRef(null);
   const playerRef = useRef(null);
   const playerIdx = leaderboard.findIndex(e => e.isPlayer);
 
-  // Build display list: top 10 but always include the player, centered
+  useEffect(() => {
+    if (playerRef.current) {
+      setTimeout(() => playerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 600);
+    }
+  }, []);
+
   const displayEntries = useMemo(() => {
     const top10 = leaderboard.slice(0, 10);
     if (playerIdx < 10) return top10;
-    // Player is outside top 10 — show top 3, then "...", then entries around player
     const around = leaderboard.slice(Math.max(3, playerIdx - 1), playerIdx + 2);
     return [...leaderboard.slice(0, 3), { separator: true }, ...around];
   }, [leaderboard, playerIdx]);
 
-  useEffect(() => {
-    if (playerRef.current) {
-      setTimeout(() => playerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 800);
-    }
-  }, []);
+  const medals = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
   return (
-    <div ref={scrollRef} style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 400, overflowY: "auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {displayEntries.map((entry, i) => {
         if (entry.separator) return (
-          <div key="sep" style={{ textAlign: "center", padding: "4px 0", color: FB.textTer, fontSize: 18, letterSpacing: 4 }}>···</div>
+          <div key="sep" style={{ textAlign: "center", padding: "6px 0", color: FB.textTer, fontSize: 16, letterSpacing: 6, fontWeight: 700 }}>•••</div>
         );
         const isPlayer = entry.isPlayer;
-        const medalColors = { 1: FB.gold, 2: "#94A3B8", 3: "#CD7F32" };
-        const medal = medalColors[entry.rank];
+        const isTop3 = entry.rank <= 3;
+        const medal = medals[entry.rank];
+        const rankBg = entry.rank === 1 ? "linear-gradient(135deg, #FEF3C7, #FDE68A)" : entry.rank === 2 ? "linear-gradient(135deg, #F1F5F9, #E2E8F0)" : entry.rank === 3 ? "linear-gradient(135deg, #FED7AA, #FDBA74)" : "none";
+
         return (
           <div ref={isPlayer ? playerRef : undefined} key={`${entry.team}-${i}`} style={{
             display: "flex", alignItems: "center", justifyContent: "space-between",
-            background: isPlayer ? `${FB.primary}12` : "#FFFFFF",
-            border: `2.5px solid ${isPlayer ? FB.primary : FB.border}`,
+            background: isPlayer ? `linear-gradient(135deg, ${FB.primary}14, ${FB.primary}08)` : isTop3 ? rankBg : "#FFFFFF",
+            border: isPlayer ? `2.5px solid ${FB.primary}` : isTop3 ? `1.5px solid ${entry.rank === 1 ? "#F59E0B" : entry.rank === 2 ? "#CBD5E1" : "#F97316"}44` : `1.5px solid ${FB.border}`,
             borderRadius: isPlayer ? 20 : 16,
-            padding: isPlayer ? "20px 24px" : "16px 20px",
+            padding: isPlayer ? "18px 22px" : "14px 18px",
             animation: isPlayer ? `lbPlayerSlide 0.8s ${0.3 + i * 0.12}s ease-out both` : `lbRowFade 0.4s ${0.1 + i * 0.1}s ease-out both`,
-            boxShadow: isPlayer ? `0 8px 32px rgba(28,70,245,0.25), 0 0 0 1px rgba(28,70,245,0.1)` : "0 1px 4px rgba(0,0,0,0.04)",
-            transform: isPlayer ? "scale(1.04)" : "none",
+            boxShadow: isPlayer ? `0 8px 28px rgba(28,70,245,0.22)` : isTop3 ? "0 2px 10px rgba(0,0,0,0.06)" : "0 1px 3px rgba(0,0,0,0.03)",
+            transform: isPlayer ? "scale(1.03)" : "none",
             position: "relative", overflow: "hidden",
           }}>
-            {isPlayer && <div style={{
-              position: "absolute", inset: 0, background: `linear-gradient(135deg, ${FB.primary}08, ${FB.primary}18)`,
-              pointerEvents: "none",
-            }} />}
-            <div style={{ display: "flex", alignItems: "center", gap: 14, zIndex: 1 }}>
-              <div style={{
-                width: isPlayer ? 44 : 38, height: isPlayer ? 44 : 38, borderRadius: 12,
-                background: isPlayer ? FB.primary : medal ? `${medal}22` : "#FFFFFF",
-                border: `2px solid ${isPlayer ? FB.primary : medal || FB.border}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: isPlayer ? 18 : 16, fontWeight: 900, color: isPlayer ? "#FFFFFF" : medal || FB.textTer,
-              }}>{entry.rank}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
+              {medal ? (
+                <div style={{ fontSize: isPlayer ? 28 : 24, lineHeight: 1, width: isPlayer ? 44 : 38, textAlign: "center" }}>{medal}</div>
+              ) : (
+                <div style={{
+                  width: isPlayer ? 44 : 36, height: isPlayer ? 44 : 36, borderRadius: isPlayer ? 14 : 10,
+                  background: isPlayer ? FB.primary : FB.bg,
+                  border: `2px solid ${isPlayer ? FB.primary : FB.border}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: isPlayer ? 17 : 14, fontWeight: 900, color: isPlayer ? "#FFFFFF" : FB.textTer,
+                }}>{entry.rank}</div>
+              )}
               <div style={{ textAlign: "left" }}>
-                <div style={{ fontSize: isPlayer ? 19 : 17, fontWeight: isPlayer ? 800 : 600, color: isPlayer ? FB.primary : FB.text }}>
-                  {entry.team} {isPlayer && "⬅"}
+                <div style={{
+                  fontSize: isPlayer ? 18 : 15, fontWeight: isPlayer ? 800 : isTop3 ? 700 : 600,
+                  color: isPlayer ? FB.primary : FB.text,
+                }}>
+                  {entry.team}
                 </div>
-                <div style={{ fontSize: 13, color: FB.textTer }}>{entry.matches} matches</div>
+                <div style={{ fontSize: 12, color: FB.textTer, marginTop: 1 }}>{entry.matches} match{entry.matches !== 1 ? "es" : ""}</div>
               </div>
             </div>
-            <div style={{ fontSize: isPlayer ? 22 : 18, fontWeight: 800, color: FB.gold, zIndex: 1 }}>€{entry.commission.toLocaleString()}</div>
+            <div style={{
+              fontSize: isPlayer ? 20 : 16, fontWeight: 800, zIndex: 1,
+              color: isPlayer ? FB.primary : isTop3 ? FB.text : FB.textSec,
+            }}>€{entry.commission.toLocaleString()}</div>
           </div>
         );
       })}
@@ -327,19 +334,25 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
 
         {/* ─── LEADERBOARD ─── */}
         {phase === "leaderboard" && (
-          <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 18, letterSpacing: 5, color: FB.textSec, marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>Leaderboard</div>
-            <div style={{ fontSize: 14, color: FB.textTer, marginBottom: 24 }}>Top teams</div>
-            <LeaderboardList leaderboard={leaderboard} />
-            <button onClick={() => setPhase("fizbot")} style={{
-              marginTop: 32, padding: "16px 56px", fontSize: 16, fontWeight: 800, fontFamily: "system-ui",
-              color: "#FFFFFF", background: FB.primary, border: "none",
-              borderRadius: 16, cursor: "pointer", textTransform: "uppercase", letterSpacing: 3,
-              boxShadow: `0 4px 20px rgba(28,70,245,0.3)`, transition: "transform 0.15s",
-            }}
-              onMouseOver={e => e.currentTarget.style.transform = "scale(1.03)"}
-              onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
-            >Continue</button>
+          <div style={{ textAlign: "center", display: "flex", flexDirection: "column", height: "calc(100vh - 64px)", maxHeight: "calc(100vh - 64px)" }}>
+            <div style={{ flexShrink: 0, paddingTop: 16 }}>
+              <div style={{ fontSize: 18, letterSpacing: 5, color: FB.textSec, marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>Leaderboard</div>
+              <div style={{ fontSize: 14, color: FB.textTer, marginBottom: 20 }}>Top teams</div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", paddingBottom: 8 }}>
+              <LeaderboardList leaderboard={leaderboard} />
+            </div>
+            <div style={{ flexShrink: 0, paddingTop: 20, paddingBottom: 16 }}>
+              <button onClick={() => setPhase("fizbot")} style={{
+                padding: "16px 56px", fontSize: 16, fontWeight: 800, fontFamily: "system-ui",
+                color: "#FFFFFF", background: FB.primary, border: "none",
+                borderRadius: 16, cursor: "pointer", textTransform: "uppercase", letterSpacing: 3,
+                boxShadow: `0 4px 20px rgba(28,70,245,0.3)`, transition: "transform 0.15s",
+              }}
+                onMouseOver={e => e.currentTarget.style.transform = "scale(1.03)"}
+                onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
+              >Continue</button>
+            </div>
           </div>
         )}
 
