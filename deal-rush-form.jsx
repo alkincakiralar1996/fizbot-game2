@@ -100,18 +100,26 @@ function MiniCard({ item, isMatched, isNew, side }) {
       borderRadius: 16, overflow: "hidden",
       animation: isNew && isMatched ? "cardMatchIn 0.6s ease-out" : "slideFromLeft 0.3s ease-out",
       boxShadow: isMatched ? `0 4px 16px ${accent}20` : "0 2px 6px rgba(0,0,0,0.04)",
-      position: "relative",
+      position: "relative", minWidth: 160, flexShrink: 0,
     }}>
       {locImg && <img src={locImg} alt={item.location} style={{ width: "100%", height: 70, objectFit: "cover", display: "block" }} />}
       {isMatched && (
         <div style={{
-          position: "absolute", top: 8, right: 8, width: 28, height: 28, borderRadius: 8,
-          background: accent, display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: `0 2px 8px ${accent}40`,
+          position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+          pointerEvents: "none", zIndex: 2,
         }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
+          <div style={{
+            padding: "6px 18px", borderRadius: 6,
+            border: `3px solid ${accent}`, background: `${accent}18`,
+            transform: "rotate(-12deg)",
+            animation: isNew ? "stampSlam 0.5s ease-out forwards" : "none",
+            boxShadow: isNew ? `0 4px 20px ${accent}50` : `0 2px 8px ${accent}30`,
+          }}>
+            <span style={{
+              fontSize: 20, fontWeight: 900, letterSpacing: 3,
+              color: accent, textTransform: "uppercase", fontFamily: "system-ui",
+            }}>MATCH</span>
+          </div>
         </div>
       )}
       <div style={{ padding: "10px 12px" }}>
@@ -120,6 +128,74 @@ function MiniCard({ item, isMatched, isNew, side }) {
           {item.priceRange} · {item.location}
         </div>
       </div>
+    </div>
+  );
+}
+
+function LeaderboardList({ leaderboard }) {
+  const scrollRef = useRef(null);
+  const playerRef = useRef(null);
+  const playerIdx = leaderboard.findIndex(e => e.isPlayer);
+
+  // Build display list: top 10 but always include the player, centered
+  const displayEntries = useMemo(() => {
+    const top10 = leaderboard.slice(0, 10);
+    if (playerIdx < 10) return top10;
+    // Player is outside top 10 — show top 3, then "...", then entries around player
+    const around = leaderboard.slice(Math.max(3, playerIdx - 1), playerIdx + 2);
+    return [...leaderboard.slice(0, 3), { separator: true }, ...around];
+  }, [leaderboard, playerIdx]);
+
+  useEffect(() => {
+    if (playerRef.current) {
+      setTimeout(() => playerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 800);
+    }
+  }, []);
+
+  return (
+    <div ref={scrollRef} style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 400, overflowY: "auto" }}>
+      {displayEntries.map((entry, i) => {
+        if (entry.separator) return (
+          <div key="sep" style={{ textAlign: "center", padding: "4px 0", color: FB.textTer, fontSize: 18, letterSpacing: 4 }}>···</div>
+        );
+        const isPlayer = entry.isPlayer;
+        const medalColors = { 1: FB.gold, 2: "#94A3B8", 3: "#CD7F32" };
+        const medal = medalColors[entry.rank];
+        return (
+          <div ref={isPlayer ? playerRef : undefined} key={`${entry.team}-${i}`} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            background: isPlayer ? `${FB.primary}12` : "#FFFFFF",
+            border: `2.5px solid ${isPlayer ? FB.primary : FB.border}`,
+            borderRadius: isPlayer ? 20 : 16,
+            padding: isPlayer ? "20px 24px" : "16px 20px",
+            animation: isPlayer ? `lbPlayerSlide 0.8s ${0.3 + i * 0.12}s ease-out both` : `lbRowFade 0.4s ${0.1 + i * 0.1}s ease-out both`,
+            boxShadow: isPlayer ? `0 8px 32px rgba(28,70,245,0.25), 0 0 0 1px rgba(28,70,245,0.1)` : "0 1px 4px rgba(0,0,0,0.04)",
+            transform: isPlayer ? "scale(1.04)" : "none",
+            position: "relative", overflow: "hidden",
+          }}>
+            {isPlayer && <div style={{
+              position: "absolute", inset: 0, background: `linear-gradient(135deg, ${FB.primary}08, ${FB.primary}18)`,
+              pointerEvents: "none",
+            }} />}
+            <div style={{ display: "flex", alignItems: "center", gap: 14, zIndex: 1 }}>
+              <div style={{
+                width: isPlayer ? 44 : 38, height: isPlayer ? 44 : 38, borderRadius: 12,
+                background: isPlayer ? FB.primary : medal ? `${medal}22` : "#FFFFFF",
+                border: `2px solid ${isPlayer ? FB.primary : medal || FB.border}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: isPlayer ? 18 : 16, fontWeight: 900, color: isPlayer ? "#FFFFFF" : medal || FB.textTer,
+              }}>{entry.rank}</div>
+              <div style={{ textAlign: "left" }}>
+                <div style={{ fontSize: isPlayer ? 19 : 17, fontWeight: isPlayer ? 800 : 600, color: isPlayer ? FB.primary : FB.text }}>
+                  {entry.team} {isPlayer && "⬅"}
+                </div>
+                <div style={{ fontSize: 13, color: FB.textTer }}>{entry.matches} matches</div>
+              </div>
+            </div>
+            <div style={{ fontSize: isPlayer ? 22 : 18, fontWeight: 800, color: FB.gold, zIndex: 1 }}>€{entry.commission.toLocaleString()}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -254,39 +330,7 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: 18, letterSpacing: 5, color: FB.textSec, marginBottom: 4, textTransform: "uppercase", fontWeight: 700 }}>Leaderboard</div>
             <div style={{ fontSize: 14, color: FB.textTer, marginBottom: 24 }}>Top teams</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10, maxHeight: 400, overflowY: "auto" }}>
-              {leaderboard.slice(0, 10).map((entry, i) => {
-                const isPlayer = entry.isPlayer;
-                const medalColors = { 1: FB.gold, 2: "#94A3B8", 3: "#CD7F32" };
-                const medal = medalColors[entry.rank];
-                return (
-                  <div key={`${entry.team}-${i}`} style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    background: isPlayer ? `${FB.primary}10` : "#FFFFFF",
-                    border: `2px solid ${isPlayer ? FB.primary : FB.border}`,
-                    borderRadius: 16, padding: "16px 20px",
-                    animation: isPlayer ? `lbPlayerSlide 0.8s ${0.3 + i * 0.12}s ease-out both` : `lbRowFade 0.4s ${0.1 + i * 0.1}s ease-out both`,
-                    boxShadow: isPlayer ? `0 4px 16px rgba(28,70,245,0.15)` : "0 1px 4px rgba(0,0,0,0.04)",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14, zIndex: 1 }}>
-                      <div style={{
-                        width: 38, height: 38, borderRadius: 12,
-                        background: medal ? `${medal}22` : "#FFFFFF", border: `2px solid ${medal || FB.border}`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 16, fontWeight: 900, color: medal || FB.textTer,
-                      }}>{entry.rank}</div>
-                      <div style={{ textAlign: "left" }}>
-                        <div style={{ fontSize: 17, fontWeight: isPlayer ? 800 : 600, color: isPlayer ? FB.primary : FB.text }}>
-                          {entry.team} {isPlayer && "⬅"}
-                        </div>
-                        <div style={{ fontSize: 13, color: FB.textTer }}>{entry.matches} matches</div>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: FB.gold, zIndex: 1 }}>€{entry.commission.toLocaleString()}</div>
-                  </div>
-                );
-              })}
-            </div>
+            <LeaderboardList leaderboard={leaderboard} />
             <button onClick={() => setPhase("fizbot")} style={{
               marginTop: 32, padding: "16px 56px", fontSize: 16, fontWeight: 800, fontFamily: "system-ui",
               color: "#FFFFFF", background: FB.primary, border: "none",
@@ -363,6 +407,24 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
 }
 
 // ─── Game Panel (full screen on each tablet) ───
+function OptionCard({ label, selected, onClick, icon, wide, disabled }) {
+  return (
+    <div onClick={disabled ? undefined : onClick} style={{
+      flex: wide ? "1 1 45%" : "1 1 28%", background: "#FFFFFF",
+      border: `2.5px solid ${FB.border}`,
+      borderRadius: 20, padding: "20px 16px", textAlign: "center",
+      cursor: disabled ? "default" : "pointer", transition: "all 0.15s",
+      userSelect: "none", WebkitTapHighlightColor: "transparent",
+      touchAction: "manipulation",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+      minHeight: 120, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+    }}>
+      {icon && <div style={{ marginBottom: 14 }}>{icon}</div>}
+      <span style={{ fontSize: 20, fontWeight: 700, color: FB.text }}>{label}</span>
+    </div>
+  );
+}
+
 function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled, commission, pendingItems, matchedDeals, playerName, partnerName, onEndGame }) {
   const isListing = role === "listing";
   const accent = isListing ? FB.primary : "#54B329";
@@ -392,21 +454,6 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
       <rect x="12" y="9" width="10" height="12" rx="1" stroke={sel ? accent : FB.textTer} strokeWidth="1.5" />
       <path d="M12 9L17 4L22 9" stroke={sel ? accent : FB.textTer} strokeWidth="1.5" />
     </svg>
-  );
-
-  const OptionCard = ({ label: lbl, selected, onClick, icon, wide }) => (
-    <div onClick={disabled ? undefined : onClick} style={{
-      flex: wide ? "1 1 45%" : "1 1 28%", background: "#FFFFFF",
-      border: `2.5px solid ${FB.border}`,
-      borderRadius: 20, padding: "20px 16px", textAlign: "center",
-      cursor: disabled ? "default" : "pointer", transition: "all 0.15s",
-      userSelect: "none", WebkitTapHighlightColor: "transparent",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-      minHeight: 120, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-    }}>
-      {icon && <div style={{ marginBottom: 14 }}>{icon}</div>}
-      <span style={{ fontSize: 20, fontWeight: 700, color: FB.text }}>{lbl}</span>
-    </div>
   );
 
   const sectionTitle = isListing ? "Create Listing" : "Create Buyer Demand";
@@ -501,7 +548,7 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
 
       {/* Mini cards */}
       {(matchedDeals.length > 0 || pendingItems.length > 0) && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, width: "100%", marginBottom: 24 }}>
+        <div style={{ display: "flex", gap: 12, width: "100%", marginBottom: 24, overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 4 }}>
           {[...matchedDeals].reverse().map(deal => (
             <MiniCard key={`m${deal.id}`} item={isListing ? deal.listing : deal.buyer} isMatched={true} isNew={deal.isNew} side={role} />
           ))}
@@ -527,18 +574,18 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
               </div>
               {step === 1 && (
                 <div style={{ display: "flex", gap: 16 }}>
-                  <OptionCard label="Apartment" icon={houseIcon(false)} selected={false} onClick={() => onSelect("propertyType", "Apartment")} wide />
-                  <OptionCard label="Villa" icon={villaIcon(false)} selected={false} onClick={() => onSelect("propertyType", "Villa")} wide />
+                  <OptionCard label="Apartment" icon={houseIcon(false)} selected={false} onClick={() => onSelect("propertyType", "Apartment")} wide disabled={disabled} />
+                  <OptionCard label="Villa" icon={villaIcon(false)} selected={false} onClick={() => onSelect("propertyType", "Villa")} wide disabled={disabled} />
                 </div>
               )}
               {step === 2 && (
                 <div style={{ display: "flex", gap: 14 }}>
-                  {SIZES.map(s => <OptionCard key={s} label={s} selected={false} onClick={() => onSelect("size", s)} />)}
+                  {SIZES.map(s => <OptionCard key={s} label={s} selected={false} onClick={() => onSelect("size", s)} disabled={disabled} />)}
                 </div>
               )}
               {step === 3 && (
                 <div style={{ display: "flex", gap: 14 }}>
-                  {(isListing ? LISTING_PRICES : BUYER_PRICES).map(p => <OptionCard key={p} label={p} selected={false} onClick={() => onSelect("priceRange", p)} />)}
+                  {(isListing ? LISTING_PRICES : BUYER_PRICES).map(p => <OptionCard key={p} label={p} selected={false} onClick={() => onSelect("priceRange", p)} disabled={disabled} />)}
                 </div>
               )}
               {step === 4 && (
@@ -550,6 +597,7 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
                       borderRadius: 18, overflow: "hidden",
                       cursor: disabled ? "default" : "pointer", transition: "all 0.2s",
                       userSelect: "none", WebkitTapHighlightColor: "transparent",
+                      touchAction: "manipulation",
                       boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
                     }}>
                       <img src={l.img} alt={l.name} style={{ width: "100%", height: 100, objectFit: "cover", display: "block" }} />
@@ -1175,12 +1223,13 @@ export default function DealRushForm() {
   useEffect(() => { listingsRef.current = listings; }, [listings]);
   useEffect(() => { buyersRef.current = buyers; }, [buyers]);
 
-  // Load game duration from DB on mount
+  // Load game duration from DB whenever returning to lobby (covers mount + replay)
   useEffect(() => {
+    if (gameState !== "lobby" && gameState !== "countdown") return;
     supabase.from("settings").select("value").eq("key", "game_duration").single().then(({ data }) => {
       if (data) { const v = parseInt(data.value); setGameDuration(v); setTimeLeft(v); }
     });
-  }, []);
+  }, [gameState]);
 
   // Listen for taken roles while on lobby
   const lobbyChannelRef = useRef(null);
@@ -1371,7 +1420,7 @@ export default function DealRushForm() {
     setGameState("lobby"); setRole(null); setPlayer(null); setPartner(null);
     setTimeLeft(gameDuration); setMatchCount(0); setTotalCommission(0);
     setSelections({ ...emptySelection }); setListings([]); setBuyers([]); setMatchedDeals([]); idRef.current = 0;
-  }, []);
+  }, [gameDuration]);
 
   const handleSelect = useCallback((field, value) => {
     if (gameState !== "playing") return;
@@ -1409,6 +1458,7 @@ export default function DealRushForm() {
         @keyframes timerShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
         @keyframes dotPulse{0%,100%{opacity:0.3;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}
         @keyframes numberPop{from{transform:scale(1.1)}to{transform:scale(1)}}
+        @keyframes stampSlam{0%{transform:rotate(-12deg) scale(3);opacity:0}40%{transform:rotate(-12deg) scale(0.85);opacity:1}60%{transform:rotate(-12deg) scale(1.1)}100%{transform:rotate(-12deg) scale(1);opacity:1}}
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:3px}
         ::-webkit-scrollbar-thumb{background:${FB.border};border-radius:2px}
