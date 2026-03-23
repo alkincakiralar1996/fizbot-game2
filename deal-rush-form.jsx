@@ -36,6 +36,9 @@ const LOCATIONS = [
   { name: "Porto", img: "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=200&h=120&fit=crop" },
   { name: "Algarve", img: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&h=120&fit=crop" },
 ];
+const LISTING_IMAGES = Array.from({ length: 50 }, (_, i) => `/listing-images/listing-${String(i).padStart(2, "0")}.jpg`);
+function randomListingImg() { return LISTING_IMAGES[Math.floor(Math.random() * LISTING_IMAGES.length)]; }
+
 const PRICE_MATCH_MAP = { "€300k": "€200-400k", "€500k": "€400-600k", "€700k": "€600-800k" };
 const PRICE_TO_VALUE = { "€300k": 300000, "€500k": 500000, "€700k": 700000 };
 const DEFAULT_GAME_DURATION = 300;
@@ -92,7 +95,6 @@ function MatchOverlay({ show }) {
 // ─── Mini Card (grid style) ───
 function MiniCard({ item, isMatched, isNew, side }) {
   const accent = side === "listing" ? FB.primary : "#54B329";
-  const locImg = LOCATIONS.find(l => l.name === item.location)?.img;
   return (
     <div style={{
       background: isMatched ? `${accent}08` : "#FFFFFF",
@@ -100,17 +102,19 @@ function MiniCard({ item, isMatched, isNew, side }) {
       borderRadius: 16, overflow: "hidden",
       animation: isNew && isMatched ? "cardMatchIn 0.6s ease-out" : "slideFromLeft 0.3s ease-out",
       boxShadow: isMatched ? `0 4px 16px ${accent}20` : "0 2px 6px rgba(0,0,0,0.04)",
-      position: "relative", minWidth: 160, flexShrink: 0,
+      position: "relative", width: 140, flexShrink: 0,
     }}>
-      {locImg && <img src={locImg} alt={item.location} style={{ width: "100%", height: 70, objectFit: "cover", display: "block" }} />}
+      {item.img && <img src={item.img} alt={item.propertyType} style={{ width: "100%", height: 100, objectFit: "cover", display: "block" }} />}
       {isMatched && (
         <div style={{
-          position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+          position: "absolute", top: 0, left: 0, right: 0, height: 100,
+          display: "flex", alignItems: "center", justifyContent: "center",
           pointerEvents: "none", zIndex: 2,
+          background: "rgba(255,255,255,0.55)", backdropFilter: "blur(2px)",
         }}>
           <div style={{
             padding: "6px 18px", borderRadius: 6,
-            border: `3px solid ${accent}`, background: `${accent}18`,
+            border: `3px solid ${accent}`, background: "rgba(255,255,255,0.85)",
             transform: "rotate(-12deg)",
             animation: isNew ? "stampSlam 0.5s ease-out forwards" : "none",
             boxShadow: isNew ? `0 4px 20px ${accent}50` : `0 2px 8px ${accent}30`,
@@ -151,8 +155,16 @@ function LeaderboardList({ leaderboard }) {
 
   const medals = { 1: "🥇", 2: "🥈", 3: "🥉" };
 
+  // Calculate distance from player for zoom effect
+  const getDistanceFromPlayer = (entry) => {
+    if (!entry.rank || playerIdx < 0) return 99;
+    const playerRank = leaderboard[playerIdx]?.rank;
+    if (!playerRank) return 99;
+    return Math.abs(entry.rank - playerRank);
+  };
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, perspective: 800, padding: "0 12px" }}>
       {displayEntries.map((entry, i) => {
         if (entry.separator) return (
           <div key="sep" style={{ textAlign: "center", padding: "6px 0", color: FB.textTer, fontSize: 16, letterSpacing: 6, fontWeight: 700 }}>•••</div>
@@ -160,7 +172,14 @@ function LeaderboardList({ leaderboard }) {
         const isPlayer = entry.isPlayer;
         const isTop3 = entry.rank <= 3;
         const medal = medals[entry.rank];
-        const rankBg = entry.rank === 1 ? "linear-gradient(135deg, #FEF3C7, #FDE68A)" : entry.rank === 2 ? "linear-gradient(135deg, #F1F5F9, #E2E8F0)" : entry.rank === 3 ? "linear-gradient(135deg, #FED7AA, #FDBA74)" : "none";
+        const rankBg = entry.rank === 1 ? "linear-gradient(135deg, #FFF7CD, #FFE066)"
+          : entry.rank === 2 ? "linear-gradient(135deg, #F0F4FF, #D6E0F5)"
+          : entry.rank === 3 ? "linear-gradient(135deg, #FFF0E0, #FBBF7A)" : "none";
+
+        const dist = getDistanceFromPlayer(entry);
+        const neighborScale = dist === 0 ? 1.05 : dist === 1 ? 0.97 : dist === 2 ? 0.93 : 0.9;
+        const neighborOpacity = dist === 0 ? 1 : dist === 1 ? 0.85 : dist === 2 ? 0.65 : 0.5;
+        const neighborZ = dist === 0 ? 10 : dist === 1 ? 5 : 0;
 
         return (
           <div ref={isPlayer ? playerRef : undefined} key={`${entry.team}-${i}`} style={{
@@ -171,12 +190,15 @@ function LeaderboardList({ leaderboard }) {
             padding: isPlayer ? "18px 22px" : "14px 18px",
             animation: isPlayer ? `lbPlayerSlide 0.8s ${0.3 + i * 0.12}s ease-out both` : `lbRowFade 0.4s ${0.1 + i * 0.1}s ease-out both`,
             boxShadow: isPlayer ? `0 8px 28px rgba(28,70,245,0.22)` : isTop3 ? "0 2px 10px rgba(0,0,0,0.06)" : "0 1px 3px rgba(0,0,0,0.03)",
-            transform: isPlayer ? "scale(1.03)" : "none",
+            transform: `scale(${neighborScale})`,
+            opacity: neighborOpacity,
+            zIndex: neighborZ,
             position: "relative", overflow: "hidden",
+            transition: "transform 0.5s ease, opacity 0.5s ease",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, zIndex: 1 }}>
               {medal ? (
-                <div style={{ fontSize: isPlayer ? 28 : 24, lineHeight: 1, width: isPlayer ? 44 : 38, textAlign: "center" }}>{medal}</div>
+                <div style={{ fontSize: 36, lineHeight: 1, width: 44, textAlign: "center", flexShrink: 0 }}>{medal}</div>
               ) : (
                 <div style={{
                   width: isPlayer ? 44 : 36, height: isPlayer ? 44 : 36, borderRadius: isPlayer ? 14 : 10,
@@ -184,6 +206,7 @@ function LeaderboardList({ leaderboard }) {
                   border: `2px solid ${isPlayer ? FB.primary : FB.border}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: isPlayer ? 17 : 14, fontWeight: 900, color: isPlayer ? "#FFFFFF" : FB.textTer,
+                  flexShrink: 0,
                 }}>{entry.rank}</div>
               )}
               <div style={{ textAlign: "left" }}>
@@ -208,7 +231,7 @@ function LeaderboardList({ leaderboard }) {
 }
 
 // ─── End Screen ───
-function EndScreen({ matches, commission, matchedDeals, onReplay, player1, player2, leaderboardData }) {
+function EndScreen({ matches, commission, matchedDeals, onReplay, player1, player2, leaderboardData, gameSessionId }) {
   const [phase, setPhase] = useState("summary");
   const [displayMatches, setDisplayMatches] = useState(0);
   const [displayCommission, setDisplayCommission] = useState(0);
@@ -246,11 +269,17 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
 
   const leaderboard = useMemo(() => {
     const teamName = `${player1?.name || "Player 1"} & ${player2?.name || "Player 2"}`;
-    const playerEntry = { team: teamName, matches, commission, isPlayer: true };
-    const all = [...(leaderboardData || []), playerEntry];
+    const all = (leaderboardData || []).map(entry => ({
+      ...entry,
+      isPlayer: gameSessionId ? entry.id === gameSessionId : false,
+    }));
+    // If our game wasn't found in DB data (insert not yet committed), add it
+    if (!all.find(e => e.isPlayer)) {
+      all.push({ team: teamName, matches, commission, isPlayer: true });
+    }
     all.sort((a, b) => b.commission - a.commission || b.matches - a.matches);
     return all.map((entry, i) => ({ ...entry, rank: i + 1 }));
-  }, [matches, commission, leaderboardData, player1, player2]);
+  }, [matches, commission, leaderboardData, player1, player2, gameSessionId]);
 
   return (
     <div style={{
@@ -366,12 +395,6 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
             }} />
 
             <div style={{
-              fontSize: 20, letterSpacing: 8, color: FB.textSec, fontWeight: 800,
-              textTransform: "uppercase", marginBottom: 24,
-              animation: "fadeIn 0.5s 0.2s ease-out both",
-            }}>fizbot</div>
-
-            <div style={{
               fontSize: 32, fontWeight: 800, color: FB.text, marginBottom: 10,
               animation: "fadeIn 0.5s 0.4s ease-out both",
             }}>
@@ -386,20 +409,24 @@ function EndScreen({ matches, commission, matchedDeals, onReplay, player1, playe
               <span style={{ color: FB.coral }}>Close</span>
             </div>
 
-            <a href="https://fizbot.net" target="_blank" rel="noopener noreferrer" style={{
-              display: "inline-block", padding: "20px 60px",
-              fontSize: 19, fontWeight: 800, color: "#FFFFFF",
-              background: FB.primary, border: "none", borderRadius: 18,
-              textDecoration: "none", letterSpacing: 3,
+            <div style={{
+              display: "inline-flex", alignItems: "center", gap: 16,
+              padding: "18px 48px", borderRadius: 18,
+              background: FB.primary,
               boxShadow: `0 6px 24px rgba(28,70,245,0.3)`,
-              animation: "pulse4 2.5s infinite, fadeIn 0.5s 0.8s ease-out both",
-              transition: "transform 0.15s",
-            }}
-              onMouseOver={e => e.currentTarget.style.transform = "scale(1.03)"}
-              onMouseOut={e => e.currentTarget.style.transform = "scale(1)"}
-            >
-              fizbot x — early access
-            </a>
+              animation: "fadeIn 0.5s 0.8s ease-out both",
+            }}>
+              <span style={{ fontSize: 20, fontWeight: 900, color: "#FFFFFF", letterSpacing: 1 }}>FizbotX</span>
+              <span style={{ width: 1.5, height: 20, background: "rgba(255,255,255,0.3)" }} />
+              <span style={{
+                fontSize: 14, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase",
+                background: "linear-gradient(90deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.6) 100%)",
+                backgroundSize: "200% 100%",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+                animation: "shimmer 2.5s ease-in-out infinite",
+              }}>Very Soon</span>
+              <style>{`@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+            </div>
 
             <div style={{ marginTop: 48, animation: "fadeIn 0.5s 1s ease-out both" }}>
               <button onClick={onReplay} style={{
@@ -438,7 +465,7 @@ function OptionCard({ label, selected, onClick, icon, wide, disabled }) {
   );
 }
 
-function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled, commission, pendingItems, matchedDeals, playerName, partnerName, onEndGame }) {
+function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled, commission, pendingItems, matchedDeals, playerName, partnerName, playerOffice, partnerOffice, onEndGame }) {
   const isListing = role === "listing";
   const accent = isListing ? FB.primary : "#54B329";
   const accentBg = isListing ? "#EEF1FE" : "#DCFCE7";
@@ -471,9 +498,9 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
 
   const sectionTitle = isListing ? "Create Listing" : "Create Buyer Demand";
 
-  const stepLabel = step === 1 ? (isListing ? "Property Type" : "What are they looking for?")
-    : step === 2 ? "Size" : step === 3 ? (isListing ? "Price Range" : "Budget Range")
-    : (isListing ? "Location" : "Preferred Area");
+  const stepLabel = step === 1 ? "Category"
+    : step === 2 ? "Room" : step === 3 ? (isListing ? "Price" : "Budget")
+    : "City";
 
   return (
     <div style={{
@@ -485,27 +512,31 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
 
       {/* Players bar */}
       <div style={{
-        display: "flex", alignItems: "center", justifyContent: "center", gap: 16,
-        marginBottom: 16,
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 20,
+        marginBottom: 20,
       }}>
         <div style={{
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "8px 16px", borderRadius: 12,
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+          padding: "12px 20px", borderRadius: 16,
           background: isListing ? "#EEF1FE" : "#FFFFFF",
-          border: `1.5px solid ${isListing ? FB.primary + "33" : FB.border}`,
+          border: `2px solid ${isListing ? FB.primary + "44" : FB.border}`,
+          minWidth: 100,
         }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={FB.primary} strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          <span style={{ fontSize: 15, fontWeight: 800, color: isListing ? FB.primary : FB.text }}>{isListing ? playerName : partnerName}</span>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={FB.primary} strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <span style={{ fontSize: 18, fontWeight: 800, color: isListing ? FB.primary : FB.text }}>{isListing ? playerName : partnerName}</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: FB.textTer }}>{isListing ? playerOffice : partnerOffice}</span>
         </div>
-        <span style={{ fontSize: 14, fontWeight: 800, color: FB.textTer }}>vs</span>
+        <span style={{ fontSize: 18, fontWeight: 900, color: FB.textTer }}>vs</span>
         <div style={{
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "8px 16px", borderRadius: 12,
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+          padding: "12px 20px", borderRadius: 16,
           background: !isListing ? "#DCFCE7" : "#FFFFFF",
-          border: `1.5px solid ${!isListing ? "#54B32933" : FB.border}`,
+          border: `2px solid ${!isListing ? "#54B32944" : FB.border}`,
+          minWidth: 100,
         }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#54B329" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span style={{ fontSize: 15, fontWeight: 800, color: !isListing ? "#54B329" : FB.text }}>{!isListing ? playerName : partnerName}</span>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#54B329" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span style={{ fontSize: 18, fontWeight: 800, color: !isListing ? "#54B329" : FB.text }}>{!isListing ? playerName : partnerName}</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: FB.textTer }}>{!isListing ? playerOffice : partnerOffice}</span>
         </div>
       </div>
 
@@ -581,9 +612,7 @@ function GamePanel({ role, selections, onSelect, matchCount, timeLeft, disabled,
               border: `1.5px solid ${FB.border}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
             }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 24 }}>
-                <span style={{ fontSize: 24, fontWeight: 900, color: FB.text }}>{sectionTitle}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: FB.textTer }}>—</span>
-                <span style={{ fontSize: 16, fontWeight: 700, color: FB.textSec }}>{stepLabel}</span>
+                <span style={{ fontSize: 24, fontWeight: 900, color: FB.text }}>{stepLabel}</span>
               </div>
               {step === 1 && (
                 <div style={{ display: "flex", gap: 16 }}>
@@ -669,7 +698,11 @@ function LobbyScreen({ onJoin, onSettings, onLeaderboard, takenRole, takenByName
   }, []);
 
   const filteredOffices = officeSearch
-    ? offices.filter(o => o.name.toLowerCase().includes(officeSearch.toLowerCase()))
+    ? offices.filter(o => {
+        const hay = o.name.toLowerCase().replace(/[\/\-\s\.]/g, "");
+        const needle = officeSearch.toLowerCase().replace(/[\/\-\s\.]/g, "");
+        return hay.includes(needle);
+      })
     : offices;
 
   const inputStyle = {
@@ -958,6 +991,15 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
       </div>
 
       <div style={{ maxWidth: 600, margin: "0 auto", padding: "24px 28px" }}>
+        {loading ? (
+          <div style={{ padding: "80px 0", textAlign: "center" }}>
+            <div style={{ width: "200px", height: 6, background: FB.bgTer, borderRadius: 3, margin: "0 auto 16px", overflow: "hidden" }}>
+              <div style={{ width: "40%", height: "100%", background: FB.primary, borderRadius: 3, animation: "loadingBar 1.2s ease-in-out infinite" }} />
+            </div>
+            <span style={{ fontSize: 15, color: FB.textTer, fontWeight: 600 }}>Loading settings...</span>
+            <style>{`@keyframes loadingBar { 0% { width: 0%; margin-left: 0; } 50% { width: 60%; margin-left: 20%; } 100% { width: 0%; margin-left: 100%; } }`}</style>
+          </div>
+        ) : (<>
         {/* Stats */}
         <div style={{ display: "flex", gap: 14, marginBottom: 24 }}>
           {[{ label: "Total Games", value: games.length, color: FB.primary }, { label: "Total Matches", value: totalMatches, color: "#54B329" }, { label: "Total Commission", value: `€${totalComm.toLocaleString()}`, color: FB.gold }].map(s => (
@@ -1000,12 +1042,7 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
 
         {/* Game history */}
         <div style={{ fontSize: 14, color: FB.textSec, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700, marginBottom: 14 }}>Game history ({games.length})</div>
-        {loading ? (
-          <div style={{ textAlign: "center", color: FB.textTer, padding: 60 }}>
-            <div style={{ width: 32, height: 32, borderRadius: "50%", border: `3px solid ${FB.border}`, borderTopColor: FB.primary, animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
-            Loading...
-          </div>
-        ) : games.length === 0 ? <div style={{ textAlign: "center", color: FB.textTer, padding: 60, fontSize: 16 }}>No games yet</div> : (
+        {games.length === 0 ? <div style={{ textAlign: "center", color: FB.textTer, padding: 60, fontSize: 16 }}>No games yet</div> : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {games.map(g => (
               <div key={g.id} style={{ background: "#FFFFFF", border: `1.5px solid ${FB.border}`, borderRadius: 16, padding: "16px 20px", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
@@ -1035,6 +1072,7 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
             ))}
           </div>
         )}
+        </>)}
       </div>
     </div>
   );
@@ -1048,15 +1086,16 @@ function LeaderboardPage({ onBack }) {
   async function fetchLeaderboard() {
     const { data } = await supabase.from("games").select("*").order("total_commission", { ascending: false });
     if (data) {
-      const teamMap = {};
-      data.forEach(g => {
-        const key = `${g.player1_name} & ${g.player2_name}`;
-        if (!teamMap[key]) teamMap[key] = { team: key, p1: g.player1_name, p2: g.player2_name, office1: g.player1_office, office2: g.player2_office || g.player1_office, matches: 0, commission: 0, gamesPlayed: 0 };
-        teamMap[key].matches += g.matches;
-        teamMap[key].commission += Number(g.total_commission);
-        teamMap[key].gamesPlayed += 1;
-      });
-      setGames(Object.values(teamMap).sort((a, b) => b.commission - a.commission || b.matches - a.matches));
+      setGames(data.map(g => ({
+        id: g.id,
+        team: `${g.player1_name} & ${g.player2_name}`,
+        p1: g.player1_name,
+        p2: g.player2_name,
+        office1: g.player1_office,
+        office2: g.player2_office || g.player1_office,
+        matches: g.matches,
+        commission: Number(g.total_commission),
+      })));
     }
     setLoading(false);
   }
@@ -1071,13 +1110,14 @@ function LeaderboardPage({ onBack }) {
 
   const totalComm = games.reduce((s, g) => s + g.commission, 0);
   const totalMatches = games.reduce((s, g) => s + g.matches, 0);
-  const totalGames = games.reduce((s, g) => s + g.gamesPlayed, 0);
+  const totalGames = games.length;
   const medalColors = { 1: FB.gold, 2: "#94A3B8", 3: "#CD7F32" };
   const col1 = games.slice(0, 12);
   const col2 = games.slice(12, 24);
 
+  const medalEmojis = { 1: "🥇", 2: "🥈", 3: "🥉" };
   const RankRow = ({ g, rank }) => {
-    const medal = medalColors[rank];
+    const medal = medalEmojis[rank];
     return (
       <div style={{
         background: "#FFFFFF", border: `1.5px solid ${FB.border}`, borderRadius: 16, padding: "16px",
@@ -1086,12 +1126,16 @@ function LeaderboardPage({ onBack }) {
         display: "flex", gap: 14, alignItems: "center",
       }}>
         {/* Rank */}
-        <div style={{
-          width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-          background: medal ? `${medal}22` : FB.bgSec, border: `2px solid ${medal || FB.border}`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 16, fontWeight: 900, color: medal || FB.textSec,
-        }}>{rank}</div>
+        {medal ? (
+          <div style={{ fontSize: 36, lineHeight: 1, width: 44, textAlign: "center", flexShrink: 0 }}>{medal}</div>
+        ) : (
+          <div style={{
+            width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+            background: FB.bgSec, border: `2px solid ${FB.border}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16, fontWeight: 900, color: FB.textSec,
+          }}>{rank}</div>
+        )}
 
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -1191,11 +1235,11 @@ function LeaderboardPage({ onBack }) {
           {/* Right: Two columns of rankings */}
           <div style={{ flex: 1, display: "flex", gap: 16 }}>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-              {col1.map((g, i) => <RankRow key={g.team} g={g} rank={i + 1} />)}
+              {col1.map((g, i) => <RankRow key={g.id || i} g={g} rank={i + 1} />)}
             </div>
             {col2.length > 0 && (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-                {col2.map((g, i) => <RankRow key={g.team} g={g} rank={i + 13} />)}
+                {col2.map((g, i) => <RankRow key={g.id || i + 12} g={g} rank={i + 13} />)}
               </div>
             )}
           </div>
@@ -1226,6 +1270,7 @@ export default function DealRushForm() {
   const [takenRole, setTakenRole] = useState(null);
   const [takenByName, setTakenByName] = useState("");
   const [leaderboardData, setLeaderboardData] = useState([]);
+  const [gameSessionId, setGameSessionId] = useState(null);
 
   const channelRef = useRef(null);
   const idRef = useRef(0);
@@ -1238,21 +1283,23 @@ export default function DealRushForm() {
 
   // Load game duration from DB whenever returning to lobby (covers mount + replay)
   useEffect(() => {
-    if (gameState !== "lobby" && gameState !== "countdown") return;
+    if (gameState !== "lobby" && gameState !== "countdown" && gameState !== "settings") return;
     supabase.from("settings").select("value").eq("key", "game_duration").single().then(({ data }) => {
-      if (data) { const v = parseInt(data.value); setGameDuration(v); setTimeLeft(v); }
+      if (data) { const v = parseInt(data.value); setGameDuration(v); if (gameState !== "settings") setTimeLeft(v); }
     });
   }, [gameState]);
 
-  // Listen for taken roles while on lobby
+  // Listen for taken roles while on lobby, respond to who_is_here while waiting
   const lobbyChannelRef = useRef(null);
+  const roleRef = useRef(null);
+  const playerRef = useRef(null);
+  const gameStateRef = useRef(gameState);
+  useEffect(() => { roleRef.current = role; }, [role]);
+  useEffect(() => { playerRef.current = player; }, [player]);
+  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+
+  // Lobby channel — lives for the entire component lifetime, never destroyed/recreated
   useEffect(() => {
-    if (gameState !== "lobby") {
-      if (lobbyChannelRef.current) { supabase.removeChannel(lobbyChannelRef.current); lobbyChannelRef.current = null; }
-      return;
-    }
-    setTakenRole(null);
-    setTakenByName("");
     const ch = supabase.channel(CHANNEL_NAME + "-lobby", { config: { broadcast: { self: false } } });
     ch.on("broadcast", { event: "role_taken" }, ({ payload }) => {
       setTakenRole(payload.role);
@@ -1262,29 +1309,33 @@ export default function DealRushForm() {
       setTakenRole(null);
       setTakenByName("");
     })
+    .on("broadcast", { event: "who_is_here" }, () => {
+      if (gameStateRef.current === "waiting" && roleRef.current && playerRef.current) {
+        ch.send({ type: "broadcast", event: "role_taken", payload: { role: roleRef.current, name: playerRef.current.name } });
+      }
+    })
     .subscribe((status) => {
       if (status === "SUBSCRIBED") {
-        // Ask if anyone is already in the room
+        // Poll once on connect
         ch.send({ type: "broadcast", event: "who_is_here", payload: {} });
       }
     });
     lobbyChannelRef.current = ch;
     return () => { supabase.removeChannel(ch); lobbyChannelRef.current = null; };
-  }, [gameState]);
-
-  // While waiting, respond to who_is_here queries from new lobby visitors
-  const waitResponderRef = useRef(null);
+  }, []);
+  // Reset lobby state on re-entering lobby, broadcast role on entering waiting
   useEffect(() => {
-    if (gameState === "waiting" && role && player) {
-      const ch = supabase.channel(CHANNEL_NAME + "-lobby", { config: { broadcast: { self: false } } });
-      ch.on("broadcast", { event: "who_is_here" }, () => {
-        ch.send({ type: "broadcast", event: "role_taken", payload: { role, name: player.name } });
-      }).subscribe();
-      waitResponderRef.current = ch;
-    } else {
-      if (waitResponderRef.current) { supabase.removeChannel(waitResponderRef.current); waitResponderRef.current = null; }
+    if (gameState === "lobby") {
+      setTakenRole(null);
+      setTakenByName("");
+      // Ask who's waiting (small delay to ensure channel is ready)
+      setTimeout(() => {
+        lobbyChannelRef.current?.send({ type: "broadcast", event: "who_is_here", payload: {} });
+      }, 300);
     }
-    return () => { if (waitResponderRef.current) { supabase.removeChannel(waitResponderRef.current); waitResponderRef.current = null; } };
+    if (gameState === "waiting" && role && player) {
+      lobbyChannelRef.current?.send({ type: "broadcast", event: "role_taken", payload: { role, name: player.name } });
+    }
   }, [gameState, role, player]);
 
   // Hash routing
@@ -1314,7 +1365,7 @@ export default function DealRushForm() {
       prevAllSelected.current = true;
       if (submitTimer.current) clearTimeout(submitTimer.current);
       submitTimer.current = setTimeout(() => {
-      const item = { ...selections, id: ++idRef.current };
+      const item = { ...selections, id: ++idRef.current, img: randomListingImg() };
       channelRef.current?.send({ type: "broadcast", event: role === "listing" ? "listing_submitted" : "buyer_submitted", payload: item });
       if (role === "listing") {
         const matchIdx = buyersRef.current.findIndex(b => item.propertyType === b.propertyType && item.size === b.size && PRICE_MATCH_MAP[item.priceRange] === b.priceRange && item.location === b.location);
@@ -1335,23 +1386,28 @@ export default function DealRushForm() {
     const commission = PRICE_TO_VALUE[listing.priceRange] * 0.025;
     setMatchCount(m => m + 1);
     setTotalCommission(c => c + commission);
-    setMatchedDeals(prev => [...prev, { listing, buyer, id: ++idRef.current, isNew: true }]);
-    setTimeout(() => setMatchedDeals(prev => prev.map(d => ({ ...d, isNew: false }))), 1500);
     setShowMatch(true);
     setScreenShake(true);
     playSound("match", 0.6);
     setTimeout(() => playSound("commission", 0.5), 300);
+    // Card stamp appears after fullscreen overlay fades
+    setTimeout(() => {
+      setMatchedDeals(prev => [...prev, { listing, buyer, id: ++idRef.current, isNew: true }]);
+      setTimeout(() => setMatchedDeals(prev => prev.map(d => ({ ...d, isNew: false }))), 1500);
+    }, 1200);
     setTimeout(() => { setShowMatch(false); setScreenShake(false); }, 1600);
     channelRef.current?.send({ type: "broadcast", event: "match_found", payload: { listing, buyer, commission } });
   }
 
   function handlePartnerListing(item) {
+    if (!item.img) item.img = randomListingImg();
     const matchIdx = buyersRef.current.findIndex(b => item.propertyType === b.propertyType && item.size === b.size && PRICE_MATCH_MAP[item.priceRange] === b.priceRange && item.location === b.location);
     if (matchIdx !== -1) { handleMatch(item, buyersRef.current[matchIdx]); setBuyers(prev => prev.filter((_, i) => i !== matchIdx)); }
     else setListings(prev => [...prev, item]);
   }
 
   function handlePartnerBuyer(item) {
+    if (!item.img) item.img = randomListingImg();
     const matchIdx = listingsRef.current.findIndex(l => l.propertyType === item.propertyType && l.size === item.size && PRICE_MATCH_MAP[l.priceRange] === item.priceRange && l.location === item.location);
     if (matchIdx !== -1) { handleMatch(listingsRef.current[matchIdx], item); setListings(prev => prev.filter((_, i) => i !== matchIdx)); }
     else setBuyers(prev => [...prev, item]);
@@ -1409,12 +1465,26 @@ export default function DealRushForm() {
   useEffect(() => {
     if (gameState !== "finished") return;
     playSound("gameover", 0.7);
+    const fetchLeaderboard = () => {
+      supabase.from("games").select("*").order("total_commission", { ascending: false }).then(({ data }) => {
+        if (data) {
+          setLeaderboardData(data.map(g => ({
+            id: g.id,
+            team: `${g.player1_name} & ${g.player2_name}`,
+            matches: g.matches,
+            commission: Number(g.total_commission),
+          })));
+        }
+      });
+    };
     if (role === "listing" && player && partner) {
-      supabase.from("games").insert({ player1_name: player.name, player1_office: player.office, player2_name: partner.name, player2_office: partner.office, matches: matchCount, total_commission: totalCommission }).then(() => {});
+      supabase.from("games").insert({ player1_name: player.name, player1_office: player.office, player2_name: partner.name, player2_office: partner.office, matches: matchCount, total_commission: totalCommission }).select().then(({ data }) => {
+        if (data?.[0]) setGameSessionId(data[0].id);
+        fetchLeaderboard();
+      });
+    } else {
+      fetchLeaderboard();
     }
-    supabase.from("games").select("*").order("total_commission", { ascending: false }).limit(10).then(({ data }) => {
-      if (data) setLeaderboardData(data.map(g => ({ team: `${g.player1_name} & ${g.player2_name}`, matches: g.matches, commission: Number(g.total_commission) })));
-    });
   }, [gameState]);
 
   const handleEndGame = useCallback(() => {
@@ -1426,13 +1496,13 @@ export default function DealRushForm() {
 
   const handleReplay = useCallback(() => {
     // Broadcast role released via responder channel (already subscribed to lobby)
-    if (waitResponderRef.current) {
-      waitResponderRef.current.send({ type: "broadcast", event: "role_released", payload: {} });
+    if (lobbyChannelRef.current) {
+      lobbyChannelRef.current.send({ type: "broadcast", event: "role_released", payload: {} });
     }
     if (channelRef.current) { supabase.removeChannel(channelRef.current); channelRef.current = null; }
     setGameState("lobby"); setRole(null); setPlayer(null); setPartner(null);
     setTimeLeft(gameDuration); setMatchCount(0); setTotalCommission(0);
-    setSelections({ ...emptySelection }); setListings([]); setBuyers([]); setMatchedDeals([]); idRef.current = 0;
+    setSelections({ ...emptySelection }); setListings([]); setBuyers([]); setMatchedDeals([]); setGameSessionId(null); idRef.current = 0;
   }, [gameDuration]);
 
   const handleSelect = useCallback((field, value) => {
@@ -1536,12 +1606,14 @@ export default function DealRushForm() {
           matchCount={matchCount} timeLeft={timeLeft} disabled={gameState === "finished"}
           commission={totalCommission} pendingItems={role === "listing" ? listings : buyers}
           matchedDeals={matchedDeals} playerName={player?.name} partnerName={partner?.name}
+          playerOffice={player?.office} partnerOffice={partner?.office}
           onEndGame={handleEndGame} />
       )}
+      <MatchOverlay show={showMatch} />
 
       {gameState === "finished" && (
         <EndScreen matches={matchCount} commission={totalCommission} matchedDeals={matchedDeals}
-          onReplay={handleReplay} player1={player} player2={partner} leaderboardData={leaderboardData} />
+          onReplay={handleReplay} player1={role === "listing" ? player : partner} player2={role === "listing" ? partner : player} leaderboardData={leaderboardData} gameSessionId={gameSessionId} />
       )}
     </div>
   );
