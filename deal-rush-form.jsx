@@ -120,6 +120,7 @@ const I18N = {
     "Loading...": "A carregar...",
     "No games played yet. Be the first!": "Ainda não há jogos. Seja o primeiro!",
     "Games": "Jogos",
+    "Default Language": "Idioma Predefinido",
     "Apartment": "Apartamento",
     "Villa": "Moradia",
     "Lisbon": "Lisboa",
@@ -817,15 +818,15 @@ function LobbyScreen({ onJoin, onSettings, onLeaderboard, takenRole, takenByName
           cursor: "pointer", fontSize: 13, fontWeight: 700,
         }}>
           <div onClick={() => setLang("en")} style={{
-            padding: "0 10px", height: "100%", display: "flex", alignItems: "center",
+            padding: "0 10px", height: "100%", display: "flex", alignItems: "center", gap: 4,
             background: lang === "en" ? FB.primary : "transparent",
             color: lang === "en" ? "#FFFFFF" : FB.textTer, transition: "all 0.2s",
-          }}>EN</div>
+          }}><span style={{ fontSize: 16 }}>🇬🇧</span> EN</div>
           <div onClick={() => setLang("pt")} style={{
-            padding: "0 10px", height: "100%", display: "flex", alignItems: "center",
+            padding: "0 10px", height: "100%", display: "flex", alignItems: "center", gap: 4,
             background: lang === "pt" ? FB.primary : "transparent",
             color: lang === "pt" ? "#FFFFFF" : FB.textTer, transition: "all 0.2s",
-          }}>PT</div>
+          }}><span style={{ fontSize: 16 }}>🇵🇹</span> PT</div>
         </div>
         <div onClick={onLeaderboard} style={{
           width: 40, height: 40, borderRadius: 10, background: FB.card, border: `1px solid ${FB.border}`,
@@ -1049,6 +1050,8 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [activeSessions, setActiveSessions] = useState([]);
+  const [defaultLang, setDefaultLang] = useState("en");
+  const [langSaved, setLangSaved] = useState(false);
   const t = useT();
 
   // Subscribe to presence for active sessions
@@ -1068,12 +1071,25 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
   }, []);
 
   useEffect(() => { fetchGames(); }, []);
+  useEffect(() => {
+    supabase.from("settings").select("value").eq("key", "default_language").single().then(({ data }) => {
+      if (data && (data.value === "en" || data.value === "pt")) setDefaultLang(data.value);
+    });
+  }, []);
 
   async function fetchGames() {
     setLoading(true);
     const { data } = await supabase.from("games").select("*").order("played_at", { ascending: false });
     setGames(data || []);
     setLoading(false);
+  }
+
+  async function handleDefaultLangSave(code) {
+    setDefaultLang(code);
+    setLangSaved(false);
+    await supabase.from("settings").upsert({ key: "default_language", value: code });
+    setLangSaved(true);
+    setTimeout(() => setLangSaved(false), 2000);
   }
 
   async function deleteGame(id) {
@@ -1208,6 +1224,34 @@ function SettingsPage({ onBack, gameDuration, onDurationChange }) {
           {saved && (
             <div style={{ fontSize: 13, color: "#54B329", fontWeight: 600, marginTop: 8, animation: "fadeIn 0.3s ease-out" }}>
               {t("Game duration updated to")} {gameDuration}s ({Math.floor(gameDuration/60)}m {gameDuration%60}s)
+            </div>
+          )}
+        </div>
+
+        {/* Default Language */}
+        <div style={{ background: "#FFFFFF", border: `2px solid ${FB.border}`, borderRadius: 16, padding: "18px 20px", marginBottom: 28, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: FB.textSec, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>{t("Default Language")}</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            {[
+              { code: "en", label: "English", flag: "🇬🇧" },
+              { code: "pt", label: "Português", flag: "🇵🇹" },
+            ].map(opt => (
+              <div key={opt.code} onClick={() => handleDefaultLangSave(opt.code)} style={{
+                flex: 1, padding: "14px 16px", borderRadius: 12, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                background: defaultLang === opt.code ? FB.primary : FB.bgSec,
+                color: defaultLang === opt.code ? "#FFFFFF" : FB.text,
+                border: `2px solid ${defaultLang === opt.code ? FB.primary : FB.border}`,
+                fontWeight: 700, fontSize: 15, transition: "all 0.2s",
+              }}>
+                <span style={{ fontSize: 22 }}>{opt.flag}</span>
+                {opt.label}
+              </div>
+            ))}
+          </div>
+          {langSaved && (
+            <div style={{ fontSize: 13, color: "#54B329", fontWeight: 600, marginTop: 8, animation: "fadeIn 0.3s ease-out" }}>
+              {t("✓ Saved")}
             </div>
           )}
         </div>
@@ -1426,6 +1470,13 @@ function LeaderboardPage({ onBack }) {
 export default function DealRushForm() {
   const [lang, setLang] = useState(() => localStorage.getItem("matchit-lang") || "en");
   useEffect(() => { localStorage.setItem("matchit-lang", lang); }, [lang]);
+  useEffect(() => {
+    if (!localStorage.getItem("matchit-lang")) {
+      supabase.from("settings").select("value").eq("key", "default_language").single().then(({ data }) => {
+        if (data && (data.value === "en" || data.value === "pt")) setLang(data.value);
+      });
+    }
+  }, []);
   const t = useT();
   const initialState = window.location.hash === "#leaderboard" ? "leaderboard" : window.location.hash === "#settings" ? "settings" : "lobby";
   const [gameState, setGameState] = useState(initialState);
