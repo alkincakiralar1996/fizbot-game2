@@ -1471,11 +1471,9 @@ export default function DealRushForm() {
   const [lang, setLang] = useState(() => localStorage.getItem("matchit-lang") || "en");
   useEffect(() => { localStorage.setItem("matchit-lang", lang); }, [lang]);
   useEffect(() => {
-    if (!localStorage.getItem("matchit-lang")) {
-      supabase.from("settings").select("value").eq("key", "default_language").single().then(({ data }) => {
-        if (data && (data.value === "en" || data.value === "pt")) setLang(data.value);
-      });
-    }
+    supabase.from("settings").select("value").eq("key", "default_language").single().then(({ data }) => {
+      if (data && (data.value === "en" || data.value === "pt")) setLang(data.value);
+    });
   }, []);
   const t = useT();
   const initialState = window.location.hash === "#leaderboard" ? "leaderboard" : window.location.hash === "#settings" ? "settings" : "lobby";
