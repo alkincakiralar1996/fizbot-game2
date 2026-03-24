@@ -1463,13 +1463,10 @@ export default function DealRushForm() {
 
   // Auto-submit
   const allSelected = selections.propertyType && selections.size && selections.priceRange && selections.location;
-  const prevAllSelected = useRef(false);
 
   const submitTimer = useRef(null);
   useEffect(() => {
-    if (allSelected && !prevAllSelected.current && gameState === "playing") {
-      prevAllSelected.current = true;
-      if (submitTimer.current) clearTimeout(submitTimer.current);
+    if (allSelected && gameState === "playing") {
       submitTimer.current = setTimeout(() => {
       if (gameStateRef.current !== "playing") return;
       const item = { ...selections, id: ++idRef.current, img: randomListingImg() };
@@ -1486,7 +1483,6 @@ export default function DealRushForm() {
       setSelections({ ...emptySelection });
       }, 600);
     }
-    if (!allSelected) { prevAllSelected.current = false; if (submitTimer.current) clearTimeout(submitTimer.current); }
     return () => { if (submitTimer.current) clearTimeout(submitTimer.current); };
   }, [allSelected, gameState, role, selections]);
 
