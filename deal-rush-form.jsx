@@ -1530,10 +1530,10 @@ export default function DealRushForm() {
     setGameState("waiting");
     const channel = supabase.channel(CHANNEL_NAME, { config: { broadcast: { self: false } } });
     channel
-      .on("broadcast", { event: "player_joined" }, ({ payload }) => { setPartner(payload.player); setGameState("countdown"); channel.send({ type: "broadcast", event: "player_ready", payload: { player: playerInfo, role: selectedRole } }); })
-      .on("broadcast", { event: "player_ready" }, ({ payload }) => { setPartner(payload.player); setGameState("countdown"); })
-      .on("broadcast", { event: "listing_submitted" }, ({ payload }) => { handlePartnerListing(payload); })
-      .on("broadcast", { event: "buyer_submitted" }, ({ payload }) => { handlePartnerBuyer(payload); })
+      .on("broadcast", { event: "player_joined" }, ({ payload }) => { if (gameStateRef.current !== "waiting") return; setPartner(payload.player); setGameState("countdown"); channel.send({ type: "broadcast", event: "player_ready", payload: { player: playerInfo, role: selectedRole } }); })
+      .on("broadcast", { event: "player_ready" }, ({ payload }) => { if (gameStateRef.current !== "waiting") return; setPartner(payload.player); setGameState("countdown"); })
+      .on("broadcast", { event: "listing_submitted" }, ({ payload }) => { if (gameStateRef.current !== "playing") return; handlePartnerListing(payload); })
+      .on("broadcast", { event: "buyer_submitted" }, ({ payload }) => { if (gameStateRef.current !== "playing") return; handlePartnerBuyer(payload); })
       .on("broadcast", { event: "match_found" }, () => { /* Match handled locally by each client */ })
       .on("broadcast", { event: "timer_sync" }, ({ payload }) => { if (gameStateRef.current !== "playing") return; setTimeLeft(Math.max(payload.timeLeft, 0)); if (payload.timeLeft <= 0) { if (timerRef.current) clearInterval(timerRef.current); setGameState("finished"); } })
       .on("broadcast", { event: "game_end" }, () => { if (gameStateRef.current !== "playing") return; if (timerRef.current) clearInterval(timerRef.current); setTimeLeft(0); setGameState("finished"); })
@@ -1600,6 +1600,14 @@ export default function DealRushForm() {
       setTimeout(fetchLeaderboard, 1500);
     } else {
       fetchLeaderboard();
+    }
+  }, [gameState]);
+
+  // Clean up game channel when game finishes to prevent ghost connections on next game
+  useEffect(() => {
+    if (gameState === "finished" && channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
   }, [gameState]);
 
